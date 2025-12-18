@@ -13,6 +13,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS, CATEGORIES, WORKER_IMAGES } from '../constants/theme';
 import Button from '../components/ui/Button';
+import TrustReassuranceBanner from '../components/TrustReassuranceBanner';
+import VerifiedBadge from '../components/VerifiedBadge';
 
 interface Applicant {
   id: string;
@@ -135,7 +137,10 @@ export default function JobDetailScreen() {
       >
         <Image source={{ uri: item.photo }} style={styles.applicantPhoto} />
         <View style={styles.applicantInfo}>
-          <Text style={styles.applicantName}>{item.name}</Text>
+          <View style={styles.applicantNameRow}>
+            <Text style={styles.applicantName}>{item.name}</Text>
+            <VerifiedBadge size="small" variant="minimal" />
+          </View>
           <View style={styles.applicantMeta}>
             <View style={styles.ratingBadge}>
               <Ionicons name="star" size={12} color={COLORS.star} />
@@ -278,22 +283,30 @@ export default function JobDetailScreen() {
           </View>
         </ScrollView>
       ) : (
-        <FlatList
-          data={DUMMY_APPLICANTS}
-          keyExtractor={(item) => item.id}
-          renderItem={renderApplicant}
-          contentContainerStyle={styles.applicantsList}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color={COLORS.textMuted} />
-              <Text style={styles.emptyTitle}>No applicants yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Workers will start applying soon
-              </Text>
-            </View>
-          }
-        />
+        <View style={styles.applicantsContainer}>
+          <View style={styles.trustBannerContainer}>
+            <TrustReassuranceBanner 
+              message="All applicants are verified workers" 
+              variant="verified"
+            />
+          </View>
+          <FlatList
+            data={DUMMY_APPLICANTS}
+            keyExtractor={(item) => item.id}
+            renderItem={renderApplicant}
+            contentContainerStyle={styles.applicantsList}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={64} color={COLORS.textMuted} />
+                <Text style={styles.emptyTitle}>No applicants yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Workers will start applying soon
+                </Text>
+              </View>
+            }
+          />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -500,6 +513,13 @@ const styles = StyleSheet.create({
   editButton: {
     flex: 1,
   },
+  applicantsContainer: {
+    flex: 1,
+  },
+  trustBannerContainer: {
+    paddingHorizontal: SPACING.base,
+    paddingTop: SPACING.md,
+  },
   applicantsList: {
     padding: SPACING.base,
   },
@@ -523,6 +543,11 @@ const styles = StyleSheet.create({
   applicantInfo: {
     flex: 1,
     marginLeft: SPACING.md,
+  },
+  applicantNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   applicantName: {
     fontSize: FONT_SIZES.base,

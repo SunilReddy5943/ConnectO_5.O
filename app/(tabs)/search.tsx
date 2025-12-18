@@ -18,6 +18,7 @@ import WorkerCard from '../components/WorkerCard';
 import JobCard from '../components/JobCard';
 import CategoryCard from '../components/CategoryCard';
 import FloatingAIButton from '../components/FloatingAIButton';
+import TrustReassuranceBanner from '../components/TrustReassuranceBanner';
 import { searchWorkers, DUMMY_WORKERS, DummyWorker } from '../data/dummyWorkers';
 import { searchJobs, DUMMY_JOBS, DummyJob, JobStatus } from '../data/dummyJobs';
 import { useApp } from '../context/AppContext';
@@ -358,6 +359,25 @@ export default function SearchScreen() {
           <Ionicons name="chevron-down" size={16} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      {/* Trust Reassurance */}
+      {!isWorkerMode && verifiedOnly && (
+        <View style={styles.trustBannerContainer}>
+          <TrustReassuranceBanner 
+            message="Only verified workers are shown" 
+            variant="verified"
+          />
+        </View>
+      )}
+      {!isWorkerMode && !verifiedOnly && workerResults.length > 0 && (
+        <View style={styles.trustBannerContainer}>
+          <TrustReassuranceBanner 
+            message="Ratings are from real customers" 
+            icon="star"
+            variant="info"
+          />
+        </View>
+      )}
     </View>
   );
 
@@ -629,6 +649,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: SPACING.md,
+  },
+  trustBannerContainer: {
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.sm,
   },
   resultsCount: {
     fontSize: FONT_SIZES.sm,

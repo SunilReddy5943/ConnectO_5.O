@@ -15,6 +15,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS, WORKER_IMAGES } from '../constants/theme';
 import { DUMMY_WORKERS } from '../data/dummyWorkers';
+import VerifiedBadge from '../components/VerifiedBadge';
+import { isWorkerVerified } from '../data/dummyReviews';
 
 interface Message {
   id: string;
@@ -72,6 +74,7 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
 
   const worker = DUMMY_WORKERS.find(w => w.id === id) || DUMMY_WORKERS[0];
+  const isVerified = isWorkerVerified(worker);
 
   useEffect(() => {
     // Simulate worker typing indicator
@@ -172,7 +175,12 @@ export default function ChatScreen() {
         <TouchableOpacity style={styles.workerInfo} onPress={() => router.push(`/worker/${worker.id}`)}>
           <Image source={{ uri: worker.profile_photo_url }} style={styles.workerAvatar} />
           <View style={styles.workerDetails}>
-            <Text style={styles.workerName}>{worker.name}</Text>
+            <View style={styles.workerNameRow}>
+              <Text style={styles.workerName}>{worker.name}</Text>
+              {isVerified && (
+                <VerifiedBadge size="small" variant="minimal" />
+              )}
+            </View>
             <View style={styles.statusRow}>
               <View style={styles.onlineIndicator} />
               <Text style={styles.statusText}>Online</Text>
@@ -289,6 +297,12 @@ const styles = StyleSheet.create({
   },
   workerDetails: {
     marginLeft: SPACING.sm,
+    flex: 1,
+  },
+  workerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   workerName: {
     fontSize: FONT_SIZES.base,

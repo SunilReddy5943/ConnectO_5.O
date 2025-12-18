@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS, CATEGORIES } from '../constants/theme';
 import Input from '../components/ui/Input';
+import TrustReassuranceBanner from '../components/TrustReassuranceBanner';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -130,6 +131,15 @@ export default function CreateJobScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Trust Reassurance */}
+          <View style={styles.trustBannerContainer}>
+            <TrustReassuranceBanner 
+              message={isWorkerMode ? "Your work request will be visible to verified customers" : "Only verified workers can apply"}
+              variant="info"
+              icon="shield-checkmark"
+            />
+          </View>
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{isWorkerMode ? 'Work Details' : 'Job Details'}</Text>
             
@@ -321,6 +331,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.base,
+  },
+  trustBannerContainer: {
+    marginBottom: SPACING.md,
   },
   section: {
     backgroundColor: COLORS.white,

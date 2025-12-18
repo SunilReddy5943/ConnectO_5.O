@@ -22,6 +22,19 @@ import WorkerCard from '../components/WorkerCard';
 import FloatingAIButton from '../components/FloatingAIButton';
 import { FEATURED_WORKERS, DUMMY_WORKERS } from '../data/dummyWorkers';
 import { DUMMY_EARNINGS_OVERVIEW, DUMMY_PERFORMANCE_METRICS } from '../data/earningsData';
+import {
+  DUMMY_GROWTH_METRICS,
+  DUMMY_VISIBILITY_SCORE,
+  DUMMY_PERFORMANCE_METRICS as WORKER_PERFORMANCE_METRICS,
+  DUMMY_ACHIEVEMENTS,
+  getPriorityTips,
+} from '../data/workerGrowthData';
+import GrowthMetricsCard from '../components/GrowthMetricsCard';
+import VisibilityScoreCard from '../components/VisibilityScoreCard';
+import PerformanceMetricsCard from '../components/PerformanceMetricsCard';
+import OptimizationTipCard from '../components/OptimizationTipCard';
+import BoostPreviewCard from '../components/BoostPreviewCard';
+import AchievementsBadges from '../components/AchievementsBadges';
 
 const { width } = Dimensions.get('window');
 
@@ -94,6 +107,90 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
+
+          {/* Growth Dashboard Header */}
+          <View style={styles.growthHeader}>
+            <View style={styles.growthTitleRow}>
+              <Ionicons name="trending-up" size={24} color={COLORS.secondary} />
+              <Text style={styles.growthTitle}>Your Growth Dashboard</Text>
+            </View>
+            <Text style={styles.growthSubtitle}>Track your progress and grow your business</Text>
+          </View>
+
+          {/* Growth Metrics Cards (Horizontal Scroll) */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.metricsScroll}
+          >
+            <GrowthMetricsCard
+              icon="eye"
+              label="Profile Views"
+              value={DUMMY_GROWTH_METRICS.profileViews}
+              color={COLORS.primary}
+              trend={{ direction: 'up', percentage: 12 }}
+            />
+            <GrowthMetricsCard
+              icon="search"
+              label="Search Appearances"
+              value={DUMMY_GROWTH_METRICS.searchAppearances}
+              color={COLORS.info}
+              trend={{ direction: 'up', percentage: 8 }}
+            />
+            <GrowthMetricsCard
+              icon="mail"
+              label="Job Requests"
+              value={DUMMY_GROWTH_METRICS.jobRequests}
+              color={COLORS.warning}
+              trend={{ direction: 'up', percentage: 15 }}
+            />
+            <GrowthMetricsCard
+              icon="checkmark-circle"
+              label="Jobs Completed"
+              value={DUMMY_GROWTH_METRICS.jobsCompleted}
+              color={COLORS.success}
+            />
+          </ScrollView>
+
+          {/* Visibility Score */}
+          <View style={styles.growthSection}>
+            <VisibilityScoreCard 
+              visibilityData={DUMMY_VISIBILITY_SCORE}
+              onImprove={() => router.push('/profile')}
+            />
+          </View>
+
+          {/* Performance Metrics */}
+          <View style={styles.growthSection}>
+            <PerformanceMetricsCard metrics={WORKER_PERFORMANCE_METRICS} />
+          </View>
+
+          {/* Profile Optimization Tips */}
+          <View style={styles.growthSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.titleRowWithIcon}>
+                <Ionicons name="bulb" size={20} color={COLORS.warning} />
+                <Text style={styles.sectionTitle}>Smart Insights</Text>
+              </View>
+            </View>
+            {getPriorityTips(3).map((tip) => (
+              <OptimizationTipCard
+                key={tip.id}
+                tip={tip}
+                onAction={() => router.push(tip.route as any)}
+              />
+            ))}
+          </View>
+
+          {/* Boost Preview */}
+          <View style={styles.growthSection}>
+            <BoostPreviewCard onLearnMore={() => {}} />
+          </View>
+
+          {/* Achievements & Badges */}
+          <View style={styles.growthSection}>
+            <AchievementsBadges achievements={DUMMY_ACHIEVEMENTS} />
+          </View>
 
           {/* Earnings Snapshot */}
           <TouchableOpacity style={styles.earningsCard} onPress={handleViewEarnings} activeOpacity={0.8}>
@@ -572,6 +669,40 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: SPACING['2xl'],
   },
+  // Worker Growth Dashboard Styles
+  growthHeader: {
+    paddingHorizontal: SPACING.base,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  growthTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  growthTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  growthSubtitle: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+  },
+  metricsScroll: {
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.sm,
+  },
+  growthSection: {
+    paddingHorizontal: SPACING.base,
+    marginTop: SPACING.lg,
+  },
+  titleRowWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
   // Worker Mode Styles
   busyBanner: {
     flexDirection: 'row',
@@ -655,10 +786,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
     marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: COLORS.borderLight,
   },
   viewDetailsButton: {
     flexDirection: 'row',

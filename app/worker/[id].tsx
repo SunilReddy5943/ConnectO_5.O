@@ -18,40 +18,15 @@ import { DUMMY_WORKERS, DummyWorker } from '../data/dummyWorkers';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
+import VerifiedBadge from '../components/VerifiedBadge';
+import TrustScore from '../components/TrustScore';
+import SafetyPromiseCard from '../components/SafetyPromiseCard';
+import ReviewCard, { Review } from '../components/ReviewCard';
+import { generateReviewsForWorker, calculateTrustScore, isWorkerVerified } from '../data/dummyReviews';
 
 const { width } = Dimensions.get('window');
 
-interface Review {
-  id: string;
-  customer_name: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
 
-const DUMMY_REVIEWS: Review[] = [
-  {
-    id: '1',
-    customer_name: 'Amit Sharma',
-    rating: 5,
-    comment: 'Excellent work! Very professional and completed the job on time. Highly recommended.',
-    date: '2 weeks ago',
-  },
-  {
-    id: '2',
-    customer_name: 'Priya Patel',
-    rating: 4,
-    comment: 'Good work overall. Was punctual and did a decent job. Would hire again.',
-    date: '1 month ago',
-  },
-  {
-    id: '3',
-    customer_name: 'Rahul Verma',
-    rating: 5,
-    comment: 'Very skilled and knowledgeable. Fixed the issue quickly and explained everything clearly.',
-    date: '2 months ago',
-  },
-];
 
 export default function WorkerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -66,6 +41,11 @@ export default function WorkerDetailScreen() {
   const worker = useMemo(() => {
     return DUMMY_WORKERS.find(w => w.id === id) || DUMMY_WORKERS[0];
   }, [id]);
+
+  // Generate trust data
+  const workerReviews = useMemo(() => generateReviewsForWorker(worker.id, worker.primary_category, worker.rating_count), [worker.id, worker.primary_category, worker.rating_count]);
+  const trustScore = useMemo(() => calculateTrustScore(worker), [worker]);
+  const isVerified = useMemo(() => isWorkerVerified(worker), [worker]);
 
   const saved = isWorkerSaved(worker.id);
 
@@ -186,10 +166,8 @@ export default function WorkerDetailScreen() {
             <View style={styles.profileInfo}>
               <View style={styles.nameRow}>
                 <Text style={styles.workerName}>{worker.name}</Text>
-                {worker.kyc_status === 'VERIFIED' && (
-                  <View style={styles.verifiedBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color={COLORS.white} />
-                  </View>
+                {isVerified && (
+                  <VerifiedBadge size="small" variant="minimal" />
                 )}
               </View>
               <Text style={styles.category}>{worker.primary_category}</Text>
@@ -226,6 +204,38 @@ export default function WorkerDetailScreen() {
               <Text style={styles.statLabel}>/day</Text>
             </View>
           </View>
+        </View>
+
+        {/* Trust Score & Safety */}
+        <View style={styles.section}>
+          <View style={styles.trustContainer}>
+            <TrustScore score={trustScore} size="large" showLabel />
+            <View style={styles.trustDetails}>
+              <View style={styles.trustDetailRow}>
+                <Ionicons name="shield-checkmark" size={18} color={COLORS.verified} />
+                <Text style={styles.trustDetailText}>
+                  {isVerified ? 'Verified Profile' : 'Profile Under Review'}
+                </Text>
+              </View>
+              <View style={styles.trustDetailRow}>
+                <Ionicons name="star" size={18} color={COLORS.star} />
+                <Text style={styles.trustDetailText}>
+                  {worker.rating_average.toFixed(1)} ⭐ ({worker.rating_count} reviews)
+                </Text>
+              </View>
+              <View style={styles.trustDetailRow}>
+                <Ionicons name="checkmark-done" size={18} color={COLORS.success} />
+                <Text style={styles.trustDetailText}>
+                  {Math.round((worker.rating_count / (worker.rating_count + 5)) * 100)}% Job Completion
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Safety Promise */}
+        <View style={styles.section}>
+          <SafetyPromiseCard />
         </View>
 
         {/* About Section */}
@@ -302,12 +312,19 @@ export default function WorkerDetailScreen() {
         {/* Reviews Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
-            <Text style={styles.reviewCount}>{DUMMY_REVIEWS.length} reviews</Text>
+            <Text style={styles.sectionTitle}>Customer Reviews</Text>
+            <Text style={styles.reviewCount}>{workerReviews.length} reviews</Text>
           </View>
-          {DUMMY_REVIEWS.map((review) => (
-            <View key={review.id}>{renderReview({ item: review })}</View>
+          <Text style={styles.reviewSubtitle}>All reviews are from verified customers</Text>
+          {workerReviews.slice(0, 5).map((review) => (
+            <ReviewCard key={review.id} review={review} variant="full" />
           ))}
+          {workerReviews.length > 5 && (
+            <TouchableOpacity style={styles.viewAllReviews}>
+              <Text style={styles.viewAllReviewsText}>View all {workerReviews.length} reviews</Text>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.bottomPadding} />
@@ -520,6 +537,44 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginBottom: SPACING.md,
+  },
+  trustContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.lg,
+  },
+  trustDetails: {
+    flex: 1,
+    gap: SPACING.sm,
+  },
+  trustDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  trustDetailText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  reviewSubtitle: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.md,
+    fontStyle: 'italic',
+  },
+  viewAllReviews: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  viewAllReviewsText: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   viewAllText: {
     fontSize: FONT_SIZES.sm,

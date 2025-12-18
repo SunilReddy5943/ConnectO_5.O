@@ -13,6 +13,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import TrustInsightsCard from '../components/TrustInsightsCard';
+import ProfileCompletenessBar from '../components/ProfileCompletenessBar';
 import {
   DUMMY_EARNINGS_OVERVIEW,
   DUMMY_MONTHLY_EARNINGS,
@@ -196,6 +198,24 @@ export default function EarningsScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* Trust Insights */}
+        <View style={styles.section}>
+          <TrustInsightsCard 
+            verified={true}
+            completionRate={DUMMY_PERFORMANCE_METRICS.completionRate}
+            averageRating={DUMMY_PERFORMANCE_METRICS.averageRating}
+          />
+        </View>
+
+        {/* Profile Completeness */}
+        <View style={styles.section}>
+          <ProfileCompletenessBar 
+            percentage={85}
+            showCTA
+            onCTAPress={() => router.push('/profile')}
+          />
         </View>
 
         {/* Performance Metrics */}

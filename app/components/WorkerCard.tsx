@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, BORDER_RADIUS, SPACING, FONT_SIZES, SHADOWS } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { DummyWorker } from '../data/dummyWorkers';
+import VerifiedBadge from './VerifiedBadge';
 
 interface WorkerCardProps {
   worker: DummyWorker;
@@ -49,14 +50,16 @@ export default function WorkerCard({ worker, variant = 'default' }: WorkerCardPr
         <Image source={{ uri: worker.profile_photo_url }} style={styles.featuredImage} />
         <View style={styles.featuredOverlay}>
           {worker.kyc_status === 'VERIFIED' && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={COLORS.white} />
-              <Text style={styles.verifiedText}>Verified</Text>
-            </View>
+            <VerifiedBadge size="small" variant="compact" />
           )}
         </View>
         <View style={styles.featuredInfo}>
-          <Text style={styles.featuredName} numberOfLines={1}>{worker.name}</Text>
+          <View style={styles.featuredNameRow}>
+            <Text style={styles.featuredName} numberOfLines={1}>{worker.name}</Text>
+            {worker.kyc_status === 'VERIFIED' && (
+              <Ionicons name="checkmark-circle" size={14} color={COLORS.verified} />
+            )}
+          </View>
           <Text style={styles.featuredCategory}>{worker.primary_category}</Text>
           <View style={styles.featuredMeta}>
             <View style={styles.ratingRow}>
@@ -79,7 +82,7 @@ export default function WorkerCard({ worker, variant = 'default' }: WorkerCardPr
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{worker.name}</Text>
             {worker.kyc_status === 'VERIFIED' && (
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.verified} />
+              <VerifiedBadge size="small" variant="minimal" />
             )}
           </View>
           <Text style={styles.category}>{worker.primary_category}</Text>
@@ -119,7 +122,7 @@ export default function WorkerCard({ worker, variant = 'default' }: WorkerCardPr
         <View style={styles.metaItem}>
           <Ionicons name="briefcase-outline" size={16} color={COLORS.textMuted} />
           <Text style={styles.metaValue}>{worker.years_of_experience}</Text>
-          <Text style={styles.metaLabel}>yrs exp</Text>
+          <Text style={styles.metaLabel}>yrs</Text>
         </View>
         <View style={styles.wageContainer}>
           <Text style={styles.wageValue}>₹{worker.daily_wage_min}-{worker.daily_wage_max}</Text>
@@ -325,10 +328,16 @@ const styles = StyleSheet.create({
   featuredInfo: {
     padding: SPACING.md,
   },
+  featuredNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
   featuredName: {
     fontSize: FONT_SIZES.base,
     fontWeight: '600',
     color: COLORS.textPrimary,
+    flex: 1,
   },
   featuredCategory: {
     fontSize: FONT_SIZES.sm,
