@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -19,16 +20,24 @@ import JobCard from '../components/JobCard';
 import CategoryCard from '../components/CategoryCard';
 import FloatingAIButton from '../components/FloatingAIButton';
 import TrustReassuranceBanner from '../components/TrustReassuranceBanner';
+// Conditionally import WorkersMapView only on native platforms
+let WorkersMapView: any = null;
+if (Platform.OS !== 'web') {
+  WorkersMapView = require('../components/WorkersMapView').default;
+}
 import { searchWorkers, DUMMY_WORKERS, DummyWorker } from '../data/dummyWorkers';
 import { searchJobs, DUMMY_JOBS, DummyJob, JobStatus } from '../data/dummyJobs';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from '../context/LocationContext';
+import { filterByRadius, sortByDistance } from '../lib/locationService';
 import { supabase } from '../lib/supabase';
 
 export default function SearchScreen() {
-  const params = useLocalSearchParams<{ category?: string; voiceMode?: string }>();
+  const params = useLocalSearchParams<{ category?: string; voiceMode?: string; nearMe?: string; radius?: string }>();
   const { addRecentSearch, recentSearches } = useApp();
   const { activeRole } = useAuth();
+  const { userLocation } = useLocation();
   const isWorkerMode = activeRole === 'WORKER';
   
   const [query, setQuery] = useState('');
@@ -40,7 +49,8 @@ export default function SearchScreen() {
   const [voiceText, setVoiceText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list'); // Map/List toggle
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Worker Search Filters (Customer Mode)
   const [selectedCategory, setSelectedCategory] = useState(params.category || '');
@@ -62,8 +72,14 @@ export default function SearchScreen() {
   const [urgentOnly, setUrgentOnly] = useState(false);
   
   // Sorting
-  const [workerSortBy, setWorkerSortBy] = useState<'best_match' | 'rating' | 'experience' | 'price_low' | 'price_high' | 'nearest'>('best_match');
+  const [workerSortBy, setWorkerSortBy] = useState<'best_match' | 'rating' | 'experience' | 'price_low' | 'price_high' | 'nearest'>(
+    params.nearMe === 'true' ? 'nearest' : 'best_match'
+  );
   const [jobSortBy, setJobSortBy] = useState<'newest' | 'highest_pay' | 'nearest' | 'urgent'>('newest');
+
+  // Near Me mode
+  const isNearMeMode = params.nearMe === 'true';
+  const nearMeRadius = params.radius ? parseInt(params.radius, 10) : 5;
 
   useEffect(() => {
     if (params.category) {
@@ -143,7 +159,7 @@ export default function SearchScreen() {
         setJobResults(sorted);
       } else {
         // Customer Mode: Search Workers
-        const filtered = searchWorkers(q, {
+        let filtered = searchWorkers(q, {
           category: selectedCategory,
           city: selectedCity,
           minExperience,
@@ -151,6 +167,14 @@ export default function SearchScreen() {
           minRating,
           verifiedOnly,
         });
+
+        // Filter by availability (only show AVAILABLE workers)
+        filtered = filtered.filter(w => w.availability_status === 'AVAILABLE');
+
+        // Apply Near Me filter
+        if (isNearMeMode && userLocation) {
+          filtered = filterByRadius(filtered, userLocation, nearMeRadius);
+        }
 
         // Sort workers
         let sorted = [...filtered];
@@ -171,8 +195,9 @@ export default function SearchScreen() {
             sorted.sort((a, b) => b.daily_wage_max - a.daily_wage_max);
             break;
           case 'nearest':
-            // Would need actual distance calculation
-            sorted.sort((a, b) => a.name.localeCompare(b.name));
+            if (userLocation) {
+              sorted = sortByDistance(sorted, userLocation);
+            }
             break;
         }
 
@@ -314,6 +339,26 @@ export default function SearchScreen() {
       />
       
       <View style={styles.filterRow}>
+        {/* Map/List Toggle - Customer Mode Only - Native platforms only */}
+        {!isWorkerMode && Platform.OS !== 'web' && (
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+              onPress={() => setViewMode('list')}
+            >
+              <Ionicons name="list" size={18} color={viewMode === 'list' ? COLORS.white : COLORS.textSecondary} />
+              <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>List</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewToggleButton, viewMode === 'map' && styles.viewToggleButtonActive]}
+              onPress={() => setViewMode('map')}
+            >
+              <Ionicons name="map" size={18} color={viewMode === 'map' ? COLORS.white : COLORS.textSecondary} />
+              <Text style={[styles.viewToggleText, viewMode === 'map' && styles.viewToggleTextActive]}>Map</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.filterButton, activeFiltersCount > 0 && styles.filterButtonActive]}
           onPress={() => setShowFilters(true)}
@@ -400,21 +445,34 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <FlatList
-        data={isWorkerMode ? jobResults : workerResults}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => 
-          isWorkerMode ? (
-            <JobCard job={item as DummyJob} />
-          ) : (
-            <WorkerCard worker={item as DummyWorker} />
-          )
-        }
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={!isLoading ? renderEmpty : null}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Map View - Customer Mode Only - Native platforms only */}
+      {!isWorkerMode && viewMode === 'map' && Platform.OS !== 'web' && WorkersMapView ? (
+        <View style={styles.mapContainer}>
+          {renderHeader()}
+          <WorkersMapView 
+            workers={workerResults} 
+            userLocation={userLocation}
+            isLoading={isLoading}
+          />
+        </View>
+      ) : (
+        /* List View */
+        <FlatList
+          data={isWorkerMode ? jobResults : workerResults}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => 
+            isWorkerMode ? (
+              <JobCard job={item as DummyJob} />
+            ) : (
+              <WorkerCard worker={item as DummyWorker} />
+            )
+          }
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={!isLoading ? renderEmpty : null}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       {/* Voice Search Modal */}
       <Modal visible={showVoiceModal} animationType="slide" transparent>
@@ -591,6 +649,9 @@ const styles = StyleSheet.create({
   listContent: {
     padding: SPACING.base,
   },
+  mapContainer: {
+    flex: 1,
+  },
   header: {
     marginBottom: SPACING.md,
   },
@@ -598,6 +659,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: SPACING.md,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 2,
+    marginRight: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  viewToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.xs,
+  },
+  viewToggleButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  viewToggleText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+  },
+  viewToggleTextActive: {
+    color: COLORS.white,
   },
   filterButton: {
     flexDirection: 'row',

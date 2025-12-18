@@ -40,6 +40,20 @@ const bios = [
   'Passionate about my work and committed to exceeding customer expectations.',
 ];
 
+// City coordinates for realistic location data
+const CITY_COORDINATES: { [key: string]: { latitude: number; longitude: number } } = {
+  'Mumbai': { latitude: 19.0760, longitude: 72.8777 },
+  'Delhi': { latitude: 28.7041, longitude: 77.1025 },
+  'Bangalore': { latitude: 12.9716, longitude: 77.5946 },
+  'Hyderabad': { latitude: 17.3850, longitude: 78.4867 },
+  'Chennai': { latitude: 13.0827, longitude: 80.2707 },
+  'Kolkata': { latitude: 22.5726, longitude: 88.3639 },
+  'Pune': { latitude: 18.5204, longitude: 73.8567 },
+  'Ahmedabad': { latitude: 23.0225, longitude: 72.5714 },
+  'Jaipur': { latitude: 26.9124, longitude: 75.7873 },
+  'Surat': { latitude: 21.1702, longitude: 72.8311 },
+};
+
 function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -78,6 +92,11 @@ export interface DummyWorker {
   travel_willingness: boolean;
   travel_radius_km: number;
   is_featured: boolean;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  availability_status: 'AVAILABLE' | 'BUSY';
 }
 
 export function generateDummyWorkers(count: number = 100): DummyWorker[] {
@@ -92,6 +111,12 @@ export function generateDummyWorkers(count: number = 100): DummyWorker[] {
     const ratingAvg = (getRandomNumber(30, 50) / 10);
     const kycStatuses: ('NOT_VERIFIED' | 'PENDING' | 'VERIFIED')[] = ['NOT_VERIFIED', 'PENDING', 'VERIFIED'];
     const availabilityTypes = ['FULL_TIME', 'PART_TIME', 'DAILY_WAGE', 'CONTRACT'];
+    const city = getRandomElement(INDIAN_CITIES);
+    const cityCoords = CITY_COORDINATES[city] || CITY_COORDINATES['Mumbai'];
+    
+    // Add random offset to coordinates (within ~5km)
+    const latOffset = (Math.random() - 0.5) * 0.09; // ~5km in latitude
+    const lonOffset = (Math.random() - 0.5) * 0.09; // ~5km in longitude
 
     workers.push({
       id: `worker-${i + 1}`,
@@ -104,7 +129,7 @@ export function generateDummyWorkers(count: number = 100): DummyWorker[] {
         subSkillsByCategory[category.name] || ['General Work', 'Maintenance', 'Installation', 'Repair'],
         getRandomNumber(2, 5)
       ),
-      city: getRandomElement(INDIAN_CITIES),
+      city: city,
       locality: `Sector ${getRandomNumber(1, 50)}`,
       state: 'Maharashtra',
       years_of_experience: experience,
@@ -121,6 +146,11 @@ export function generateDummyWorkers(count: number = 100): DummyWorker[] {
       travel_willingness: Math.random() > 0.3,
       travel_radius_km: getRandomNumber(5, 50),
       is_featured: Math.random() > 0.8,
+      location: {
+        latitude: cityCoords.latitude + latOffset,
+        longitude: cityCoords.longitude + lonOffset,
+      },
+      availability_status: Math.random() > 0.3 ? 'AVAILABLE' : 'BUSY',
     });
   }
 

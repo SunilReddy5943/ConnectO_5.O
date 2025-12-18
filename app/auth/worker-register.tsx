@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,6 +19,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS, CATEGORIES, INDIAN
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from '../context/LocationContext';
 
 const STEPS = ['Personal', 'Work', 'Location', 'Wages', 'Portfolio'];
 
@@ -33,8 +35,10 @@ const SUB_SKILLS: { [key: string]: string[] } = {
 export default function WorkerRegisterScreen() {
   const router = useRouter();
   const { login, user, updateUser } = useAuth();
+  const { requestPermission, userLocation } = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   // Personal Info - prefill from existing user if available
   const [name, setName] = useState(user?.name || '');
@@ -142,13 +146,69 @@ export default function WorkerRegisterScreen() {
     }, 1500);
   };
 
-  const handleGetLocation = () => {
-    // Simulate GPS location
-    setCity('Mumbai');
-    setLocality('Andheri West');
-    setPincode('400053');
-    setState('Maharashtra');
-    Alert.alert('Location Detected', 'Your location has been auto-filled.');
+  const handleGetLocation = async () => {
+    setIsLoadingLocation(true);
+    
+    try {
+      // Request location permission and get current location
+      const granted = await requestPermission();
+      
+      if (!granted) {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location access in settings to use this feature.',
+          [{ text: 'OK' }]
+        );
+        setIsLoadingLocation(false);
+        return;
+      }
+
+      // Wait a bit for location to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      if (userLocation) {
+        // Auto-fill location fields
+        setCity(userLocation.city);
+        setLocality(userLocation.area || `${userLocation.city} Area`);
+        setState(userLocation.country === 'India' ? 'Maharashtra' : userLocation.country);
+        
+        // Generate a dummy pincode based on city (in production, would reverse geocode)
+        const pincodes: { [key: string]: string } = {
+          'Mumbai': '400001',
+          'Delhi': '110001',
+          'Bangalore': '560001',
+          'Hyderabad': '500001',
+          'Chennai': '600001',
+          'Kolkata': '700001',
+          'Pune': '411001',
+          'Ahmedabad': '380001',
+          'Jaipur': '302001',
+          'Surat': '395001',
+        };
+        setPincode(pincodes[userLocation.city] || '400001');
+        
+        Alert.alert(
+          'Location Detected! 📍',
+          `Your location has been auto-filled:\n${userLocation.city}, ${userLocation.area}`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Location Not Available',
+          'Could not fetch your current location. Please enter manually.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert(
+        'Error',
+        'Failed to get your location. Please enter manually.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoadingLocation(false);
+    }
   };
 
   const toggleSkill = (skill: string) => {
@@ -292,9 +352,22 @@ export default function WorkerRegisterScreen() {
       <Text style={styles.stepTitle}>Location</Text>
       <Text style={styles.stepSubtitle}>Where are you based?</Text>
 
-      <TouchableOpacity style={styles.gpsButton} onPress={handleGetLocation}>
-        <Ionicons name="locate" size={20} color={COLORS.primary} />
-        <Text style={styles.gpsButtonText}>Use Current Location</Text>
+      <TouchableOpacity 
+        style={[styles.gpsButton, isLoadingLocation && styles.gpsButtonLoading]} 
+        onPress={handleGetLocation}
+        disabled={isLoadingLocation}
+      >
+        {isLoadingLocation ? (
+          <>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.gpsButtonText}>Fetching location...</Text>
+          </>
+        ) : (
+          <>
+            <Ionicons name="locate" size={20} color={COLORS.primary} />
+            <Text style={styles.gpsButtonText}>Use Current Location</Text>
+          </>
+        )}
       </TouchableOpacity>
 
       <Input label="City" placeholder="Enter your city" value={city} onChangeText={setCity} leftIcon="location-outline" />
@@ -489,6 +562,7 @@ const styles = StyleSheet.create({
   skillChipText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
   skillChipTextActive: { color: COLORS.white },
   gpsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary + '15', paddingVertical: SPACING.md, borderRadius: BORDER_RADIUS.lg, marginBottom: SPACING.lg },
+  gpsButtonLoading: { opacity: 0.7 },
   gpsButtonText: { fontSize: FONT_SIZES.base, fontWeight: '600', color: COLORS.primary, marginLeft: SPACING.sm },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.white, padding: SPACING.md, borderRadius: BORDER_RADIUS.lg, marginTop: SPACING.md, ...SHADOWS.sm },
   toggleInfo: { flex: 1 },

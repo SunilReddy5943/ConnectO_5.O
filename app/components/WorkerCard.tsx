@@ -5,10 +5,11 @@ import { useRouter } from 'expo-router';
 import { COLORS, BORDER_RADIUS, SPACING, FONT_SIZES, SHADOWS } from '../constants/theme';
 import { useApp } from '../context/AppContext';
 import { DummyWorker } from '../data/dummyWorkers';
+import { formatDistance } from '../lib/locationService';
 import VerifiedBadge from './VerifiedBadge';
 
 interface WorkerCardProps {
-  worker: DummyWorker;
+  worker: DummyWorker & { distance?: number }; // Distance in km
   variant?: 'default' | 'compact' | 'featured';
 }
 
@@ -88,7 +89,9 @@ export default function WorkerCard({ worker, variant = 'default' }: WorkerCardPr
           <Text style={styles.category}>{worker.primary_category}</Text>
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
-            <Text style={styles.location}>{worker.city}</Text>
+            <Text style={styles.location}>
+              {worker.distance !== undefined ? formatDistance(worker.distance) : worker.city}
+            </Text>
           </View>
         </View>
         <TouchableOpacity onPress={handleSave} style={styles.saveButton}>

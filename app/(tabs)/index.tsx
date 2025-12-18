@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS, CATEGORIES, HERO_IMAGE } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { useLocation } from '../context/LocationContext';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import CategoryCard from '../components/CategoryCard';
@@ -35,6 +36,7 @@ import PerformanceMetricsCard from '../components/PerformanceMetricsCard';
 import OptimizationTipCard from '../components/OptimizationTipCard';
 import BoostPreviewCard from '../components/BoostPreviewCard';
 import AchievementsBadges from '../components/AchievementsBadges';
+import { sortByDistance } from '../lib/locationService';
 
 const { width } = Dimensions.get('window');
 
@@ -42,6 +44,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user, isAuthenticated, activeRole, isWorkerAvailable } = useAuth();
   const { unreadCount } = useApp();
+  const { userLocation, getNearbyRadius } = useLocation();
   const [refreshing, setRefreshing] = useState(false);
 
   const isWorkerMode = activeRole === 'WORKER';
@@ -53,6 +56,13 @@ export default function HomeScreen() {
 
   const handleSearch = () => {
     router.push('/(tabs)/search');
+  };
+
+  const handleNearMe = () => {
+    router.push({
+      pathname: '/(tabs)/search',
+      params: { nearMe: 'true', radius: getNearbyRadius().toString() },
+    });
   };
 
   const handleVoiceSearch = () => {
@@ -82,7 +92,10 @@ export default function HomeScreen() {
     router.push('/(tabs)/earnings');
   };
 
-  const nearbyWorkers = DUMMY_WORKERS.filter(w => w.city === 'Mumbai').slice(0, 10);
+  // Get nearby workers based on user location
+  const nearbyWorkers = userLocation 
+    ? sortByDistance(DUMMY_WORKERS.filter(w => w.availability_status === 'AVAILABLE'), userLocation).slice(0, 10)
+    : DUMMY_WORKERS.filter(w => w.city === 'Mumbai' && w.availability_status === 'AVAILABLE').slice(0, 10);
 
   // Worker Mode Home
   if (isWorkerMode) {
@@ -334,7 +347,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.quickActionText}>Voice Search</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickAction} onPress={handleSearch}>
+          <TouchableOpacity style={styles.quickAction} onPress={handleNearMe}>
             <View style={[styles.quickActionIcon, { backgroundColor: COLORS.success + '15' }]}>
               <Ionicons name="location" size={24} color={COLORS.success} />
             </View>

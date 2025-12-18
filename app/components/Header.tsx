@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, FONT_SIZES, SHADOWS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
+import { useLocation } from '../context/LocationContext';
 import BusyModeToggle from './BusyModeToggle';
+import { DEFAULT_LOCATIONS } from '../lib/locationService';
 
 interface HeaderProps {
   title?: string;
@@ -24,15 +26,20 @@ export default function Header({
   showProfile = true,
   showNotifications = true,
   showLocation = false,
-  location = 'Mumbai, India',
+  location,
   transparent = false,
   rightAction,
 }: HeaderProps) {
   const router = useRouter();
   const { user, activeRole } = useAuth();
   const { unreadCount } = useApp();
+  const { userLocation, isLoading, requestPermission, setManualLocation } = useLocation();
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   const isWorkerMode = activeRole === 'WORKER';
+
+  // Use location from context if not provided
+  const displayLocation = location || (userLocation ? `${userLocation.city}, ${userLocation.country}` : 'Select Location');
 
   const handleBack = () => {
     router.back();
@@ -46,6 +53,24 @@ export default function Header({
     router.push('/notifications');
   };
 
+  const handleLocationPress = () => {
+    setShowLocationModal(true);
+  };
+
+  const handleSelectLocation = async (cityKey: keyof typeof DEFAULT_LOCATIONS) => {
+    const selectedLocation = DEFAULT_LOCATIONS[cityKey];
+    await setManualLocation(selectedLocation);
+    setShowLocationModal(false);
+  };
+
+  const handleUseCurrentLocation = async () => {
+    setShowLocationModal(false);
+    const granted = await requestPermission();
+    if (!granted) {
+      alert('Location permission denied. Please enable location access in settings.');
+    }
+  };
+
   return (
     <View style={[styles.container, transparent && styles.transparent]}>
       <View style={styles.leftSection}>
@@ -54,13 +79,19 @@ export default function Header({
             <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
           </TouchableOpacity>
         ) : showLocation ? (
-          <TouchableOpacity style={styles.locationButton}>
+          <TouchableOpacity style={styles.locationButton} onPress={handleLocationPress}>
             <Ionicons name="location" size={18} color={COLORS.primary} />
             <View style={styles.locationText}>
               <Text style={styles.locationLabel}>Your Location</Text>
               <View style={styles.locationRow}>
-                <Text style={styles.locationValue} numberOfLines={1}>{location}</Text>
-                <Ionicons name="chevron-down" size={14} color={COLORS.textSecondary} />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <>
+                    <Text style={styles.locationValue} numberOfLines={1}>{displayLocation}</Text>
+                    <Ionicons name="chevron-down" size={14} color={COLORS.textSecondary} />
+                  </>
+                )}
               </View>
             </View>
           </TouchableOpacity>
@@ -102,6 +133,49 @@ export default function Header({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* City Selector Modal */}
+      <Modal
+        visible={showLocationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Your City</Text>
+              <TouchableOpacity onPress={() => setShowLocationModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.currentLocationButton}
+              onPress={handleUseCurrentLocation}
+            >
+              <Ionicons name="navigate" size={20} color={COLORS.primary} />
+              <Text style={styles.currentLocationText}>Use Current Location</Text>
+            </TouchableOpacity>
+
+            <ScrollView style={styles.cityList}>
+              {Object.entries(DEFAULT_LOCATIONS).map(([key, loc]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={styles.cityItem}
+                  onPress={() => handleSelectLocation(key as keyof typeof DEFAULT_LOCATIONS)}
+                >
+                  <Ionicons name="location-outline" size={20} color={COLORS.textSecondary} />
+                  <Text style={styles.cityName}>{loc.city}</Text>
+                  {userLocation?.city === loc.city && (
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -203,5 +277,64 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: '700',
     color: COLORS.white,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.base,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  currentLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.primary + '10',
+    marginHorizontal: SPACING.base,
+    marginTop: SPACING.base,
+    borderRadius: 12,
+    gap: SPACING.sm,
+  },
+  currentLocationText: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  cityList: {
+    marginTop: SPACING.sm,
+  },
+  cityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.base,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+    gap: SPACING.sm,
+  },
+  cityName: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.textPrimary,
+    flex: 1,
   },
 });

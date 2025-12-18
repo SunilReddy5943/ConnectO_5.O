@@ -296,7 +296,7 @@ export default function ProfileScreen() {
           ]}
         >
           <TouchableOpacity 
-            onPress={() => router.push('/referral/index')}
+            onPress={() => router.push('/referral' as any)}
             activeOpacity={0.8}
           >
             <View style={styles.referralContent}>
@@ -307,7 +307,7 @@ export default function ProfileScreen() {
                 </Text>
                 <TouchableOpacity 
                   style={styles.referNowButton}
-                  onPress={() => router.push('/referral/index')}
+                  onPress={() => router.push('/referral' as any)}
                 >
                   <Text style={styles.referNowText}>Refer now</Text>
                 </TouchableOpacity>
