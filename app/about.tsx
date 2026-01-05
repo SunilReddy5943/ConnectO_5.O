@@ -14,7 +14,7 @@ export default function AboutSupport() {
       icon: 'help-circle',
       title: 'FAQs',
       subtitle: 'Find answers to common questions',
-      onPress: () => {},
+      onPress: () => { },
     },
     {
       id: 'email',
@@ -29,6 +29,14 @@ export default function AboutSupport() {
       title: 'Phone Support',
       subtitle: '+91 1800-XXX-XXXX',
       onPress: () => Linking.openURL('tel:+911800XXXXXX'),
+    },
+    {
+      id: 'feedback',
+      icon: 'chatbubble-ellipses',
+      title: 'Send Feedback',
+      subtitle: 'Help us improve ConnectO',
+      onPress: () => router.push('/feedback'),
+      color: '#8B5CF6',
     },
     {
       id: 'privacy',

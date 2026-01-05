@@ -18,6 +18,7 @@ export interface VisibilityScore {
 }
 
 export interface PerformanceMetrics {
+  responseRate: number; // percentage
   completionRate: number; // percentage
   acceptanceRate: number; // percentage
   averageResponseTime: string; // e.g., "3 mins"
@@ -65,6 +66,7 @@ export const DUMMY_VISIBILITY_SCORE: VisibilityScore = {
 
 // Dummy Performance Metrics
 export const DUMMY_PERFORMANCE_METRICS: PerformanceMetrics = {
+  responseRate: 92,
   completionRate: 94,
   acceptanceRate: 87,
   averageResponseTime: '3 mins',

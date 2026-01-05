@@ -16,6 +16,7 @@ interface WorkerProfileActionBarProps {
   priceLabel?: string;
   onCallPress: () => void;
   onChatPress: () => void;
+  onNotifyPress: () => void;
   isCustomerMode?: boolean;
   disabled?: boolean;
 }
@@ -25,17 +26,20 @@ export default function WorkerProfileActionBar({
   priceLabel = 'Starting from',
   onCallPress,
   onChatPress,
+  onNotifyPress,
   isCustomerMode = true,
   disabled = false,
 }: WorkerProfileActionBarProps) {
   const insets = useSafeAreaInsets();
-  
+
   // Entry animation
   const slideAnim = useRef(new Animated.Value(20)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Button press animations
   const messageScaleAnim = useRef(new Animated.Value(1)).current;
+  const notifyScaleAnim = useRef(new Animated.Value(1)).current;
+  const notifyHeartbeatAnim = useRef(new Animated.Value(1)).current;
   const ctaScaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -52,6 +56,22 @@ export default function WorkerProfileActionBar({
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Heartbeat animation for notify button
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(notifyHeartbeatAnim, {
+          toValue: 1.15,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(notifyHeartbeatAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
   const handleMessagePressIn = () => {
@@ -64,6 +84,22 @@ export default function WorkerProfileActionBar({
 
   const handleMessagePressOut = () => {
     Animated.spring(messageScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 3,
+    }).start();
+  };
+
+  const handleNotifyPressIn = () => {
+    Animated.spring(notifyScaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      friction: 3,
+    }).start();
+  };
+
+  const handleNotifyPressOut = () => {
+    Animated.spring(notifyScaleAnim, {
       toValue: 1,
       useNativeDriver: true,
       friction: 3,
@@ -114,9 +150,10 @@ export default function WorkerProfileActionBar({
             onPressOut={handleMessagePressOut}
             activeOpacity={0.85}
           >
-            <Ionicons name="chatbubbles" size={22} color={COLORS.white} />
+            <Ionicons name="chatbubbles" size={20} color={COLORS.white} />
           </TouchableOpacity>
         </Animated.View>
+
 
         {/* Primary CTA - Call Now */}
         {isCustomerMode && (
@@ -132,13 +169,32 @@ export default function WorkerProfileActionBar({
               activeOpacity={0.9}
               disabled={disabled}
             >
-              <Ionicons 
-                name="call" 
-                size={18} 
-                color={COLORS.white} 
+              <Ionicons
+                name="call"
+                size={16}
+                color={COLORS.white}
                 style={styles.ctaIcon}
               />
               <Text style={styles.ctaText}>Call Now</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Notify Button - with heartbeat animation */}
+        {isCustomerMode && (
+          <Animated.View style={{
+            transform: [
+              { scale: Animated.multiply(notifyScaleAnim, notifyHeartbeatAnim) }
+            ]
+          }}>
+            <TouchableOpacity
+              style={styles.notifyButton}
+              onPress={onNotifyPress}
+              onPressIn={handleNotifyPressIn}
+              onPressOut={handleNotifyPressOut}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="notifications" size={20} color={COLORS.white} />
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -175,6 +231,8 @@ const styles = StyleSheet.create({
   },
   priceSection: {
     justifyContent: 'center',
+    minWidth: 70,
+    maxWidth: 90,
   },
   priceLabel: {
     fontSize: 10,
@@ -183,7 +241,7 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   priceValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: -0.3,
@@ -191,15 +249,35 @@ const styles = StyleSheet.create({
   actionsSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    marginLeft: 12,
   },
   messageButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  notifyButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.warning,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
@@ -218,13 +296,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    height: 48,
+    paddingHorizontal: 12,
+    paddingVertical: 0,
+    height: 44,
     backgroundColor: COLORS.primary,
     borderRadius: 12,
     flexShrink: 1,
-    minWidth: 160,
+    minWidth: 110,
+    maxWidth: 120,
     ...Platform.select({
       ios: {
         shadowColor: COLORS.primary,
@@ -245,7 +324,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   ctaText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.white,
     letterSpacing: 0.2,

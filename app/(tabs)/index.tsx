@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,25 +22,22 @@ import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import CategoryCard from '../components/CategoryCard';
 import WorkerCard from '../components/WorkerCard';
-import FloatingAIButton from '../components/FloatingAIButton';
 import LiveStatusCard from '../components/LiveStatusCard';
-import AnalyticsSummaryCard from '../components/AnalyticsSummaryCard';
 import { FEATURED_WORKERS, DUMMY_WORKERS } from '../data/dummyWorkers';
 import { DUMMY_EARNINGS_OVERVIEW, DUMMY_PERFORMANCE_METRICS } from '../data/earningsData';
-import {
-  DUMMY_GROWTH_METRICS,
-  DUMMY_VISIBILITY_SCORE,
-  DUMMY_PERFORMANCE_METRICS as WORKER_PERFORMANCE_METRICS,
-  DUMMY_ACHIEVEMENTS,
-  getPriorityTips,
-} from '../data/workerGrowthData';
-import GrowthMetricsCard from '../components/GrowthMetricsCard';
-import VisibilityScoreCard from '../components/VisibilityScoreCard';
-import PerformanceMetricsCard from '../components/PerformanceMetricsCard';
-import OptimizationTipCard from '../components/OptimizationTipCard';
-import BoostPreviewCard from '../components/BoostPreviewCard';
-import AchievementsBadges from '../components/AchievementsBadges';
+import { DUMMY_PERFORMANCE_METRICS as WORKER_PERFORMANCE_METRICS } from '../data/workerGrowthData';
+import { DUMMY_JOB_REQUESTS, getTodayJobsCount, getPendingPayouts } from '../data/jobRequestsData';
 import { sortByDistance } from '../lib/locationService';
+
+// Worker-focused components
+import WorkerHeader from '../components/worker/WorkerHeader';
+import TodayEarningsSummary from '../components/worker/TodayEarningsSummary';
+import JobRequestsList from '../components/worker/JobRequestsList';
+import WorkerPerformanceSummary from '../components/worker/WorkerPerformanceSummary';
+import QuickActionsGrid from '../components/worker/QuickActionsGrid';
+import WeeklySummaryCard from '../components/worker/WeeklySummaryCard';
+import RecentJobsCard from '../components/worker/RecentJobsCard';
+import ActiveJobCard from '../components/worker/ActiveJobCard';
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +47,8 @@ export default function HomeScreen() {
   const { unreadCount } = useApp();
   const { userLocation, getNearbyRadius } = useLocation();
   const { getActiveDealForWorker, getActiveDealForCustomer, updateWorkStatus } = useDeal();
+
+  // State
   const [refreshing, setRefreshing] = useState(false);
 
   const isWorkerMode = activeRole === 'WORKER';
@@ -59,7 +59,7 @@ export default function HomeScreen() {
     return isWorkerMode
       ? getActiveDealForWorker(user.id)
       : getActiveDealForCustomer(user.id);
-  }, [user, isWorkerMode, getActiveDealForWorker, getActiveDealForCustomer]); // Recomputes when deals change
+  }, [user, isWorkerMode, getActiveDealForWorker, getActiveDealForCustomer]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -97,16 +97,78 @@ export default function HomeScreen() {
   };
 
   // Get nearby workers based on user location
-  const nearbyWorkers = userLocation 
+  const nearbyWorkers = userLocation
     ? sortByDistance(DUMMY_WORKERS.filter(w => w.availability_status === 'AVAILABLE'), userLocation).slice(0, 10)
     : DUMMY_WORKERS.filter(w => w.city === 'Mumbai' && w.availability_status === 'AVAILABLE').slice(0, 10);
+
+  // State for job requests
+  const [jobRequests, setJobRequests] = useState(DUMMY_JOB_REQUESTS);
+
+  // Worker actions
+  const handleToggleAvailability = useCallback(() => {
+    // This would call the actual availability API
+    Alert.alert(
+      isWorkerAvailable ? 'Go Offline?' : 'Go Online?',
+      isWorkerAvailable
+        ? 'You won\'t receive new job requests while offline.'
+        : 'You\'ll start receiving job requests.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: () => {
+            // Toggle availability logic here
+            console.log('Availability toggled');
+          }
+        },
+      ]
+    );
+  }, [isWorkerAvailable]);
+
+  const handleAcceptRequest = useCallback((requestId: string) => {
+    Alert.alert('Accept Job', 'Are you sure you want to accept this job?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Accept',
+        onPress: () => {
+          setJobRequests(prev => prev.filter(r => r.id !== requestId));
+          Alert.alert('Success', 'Job accepted! Customer will be notified.');
+        },
+      },
+    ]);
+  }, []);
+
+  const handleRejectRequest = useCallback((requestId: string) => {
+    setJobRequests(prev => prev.filter(r => r.id !== requestId));
+  }, []);
+
+  const handleCallCustomer = useCallback((requestId: string) => {
+    const request = jobRequests.find(r => r.id === requestId);
+    Alert.alert('Call Customer', `Call ${request?.customerName}?`);
+  }, [jobRequests]);
+
+  const handleMessageCustomer = useCallback((requestId: string) => {
+    const request = jobRequests.find(r => r.id === requestId);
+    router.push({
+      pathname: '/chat/[id]',
+      params: { id: requestId },
+    });
+  }, [router, jobRequests]);
 
   // Worker Mode Home
   if (isWorkerMode) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Header showLocation showProfile showNotifications />
-        
+        {/* Clean Worker Header */}
+        <WorkerHeader
+          worker={user}
+          isAvailable={isWorkerAvailable}
+          onToggleAvailability={handleToggleAvailability}
+          unreadNotifications={unreadCount}
+          onProfilePress={() => router.push('/(tabs)/profile')}
+          onNotificationsPress={() => router.push('/notifications')}
+        />
+
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
@@ -114,7 +176,7 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
           }
         >
-          {/* Live Status Card */}
+          {/* Live Status Card - Keep for active jobs */}
           {activeDeal && (
             <LiveStatusCard
               deal={activeDeal}
@@ -123,190 +185,56 @@ export default function HomeScreen() {
             />
           )}
 
-          {/* Analytics Summary Card */}
-          <View style={styles.section}>
-            <AnalyticsSummaryCard />
-          </View>
+          {/* Quick Actions Grid - NEW */}
+          <QuickActionsGrid />
 
-          {/* Availability Banner */}
-          {!isWorkerAvailable && (
-            <View style={styles.busyBanner}>
-              <Ionicons name="moon" size={20} color={COLORS.warning} />
-              <View style={styles.busyBannerText}>
-                <Text style={styles.busyBannerTitle}>You're currently busy</Text>
-                <Text style={styles.busyBannerSubtitle}>Hidden from search. Turn available to receive job requests</Text>
-              </View>
-            </View>
-          )}
+          {/* Today's Earnings - PRIORITY */}
+          <TodayEarningsSummary
+            todayEarnings={DUMMY_EARNINGS_OVERVIEW.today}
+            jobsCompletedToday={getTodayJobsCount()}
+            pendingPayouts={getPendingPayouts()}
+            onViewDetails={handleViewEarnings}
+          />
 
-          {/* Growth Dashboard Header */}
-          <View style={styles.growthHeader}>
-            <View style={styles.growthTitleRow}>
-              <Ionicons name="trending-up" size={24} color={COLORS.secondary} />
-              <Text style={styles.growthTitle}>Your Growth Dashboard</Text>
-            </View>
-            <Text style={styles.growthSubtitle}>Track your progress and grow your business</Text>
-          </View>
+          {/* Job Requests - MOST IMPORTANT */}
+          <JobRequestsList
+            requests={jobRequests}
+            onAccept={handleAcceptRequest}
+            onReject={handleRejectRequest}
+            onCall={handleCallCustomer}
+            onMessage={handleMessageCustomer}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
 
-          {/* Growth Metrics Cards (Horizontal Scroll) */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.metricsScroll}
-          >
-            <GrowthMetricsCard
-              icon="eye"
-              label="Profile Views"
-              value={DUMMY_GROWTH_METRICS.profileViews}
-              color={COLORS.primary}
-              trend={{ direction: 'up', percentage: 12 }}
-            />
-            <GrowthMetricsCard
-              icon="search"
-              label="Search Appearances"
-              value={DUMMY_GROWTH_METRICS.searchAppearances}
-              color={COLORS.info}
-              trend={{ direction: 'up', percentage: 8 }}
-            />
-            <GrowthMetricsCard
-              icon="mail"
-              label="Job Requests"
-              value={DUMMY_GROWTH_METRICS.jobRequests}
-              color={COLORS.warning}
-              trend={{ direction: 'up', percentage: 15 }}
-            />
-            <GrowthMetricsCard
-              icon="checkmark-circle"
-              label="Jobs Completed"
-              value={DUMMY_GROWTH_METRICS.jobsCompleted}
-              color={COLORS.success}
-            />
-          </ScrollView>
+          {/* Weekly Summary - NEW */}
+          <WeeklySummaryCard
+            weeklyEarnings={8450}
+            jobsCompleted={12}
+            percentChange={15}
+            onViewDetails={handleViewEarnings}
+          />
 
-          {/* Visibility Score */}
-          <View style={styles.growthSection}>
-            <VisibilityScoreCard 
-              visibilityData={DUMMY_VISIBILITY_SCORE}
-              onImprove={() => router.push('/profile')}
-            />
-          </View>
+          {/* Recent Completed Jobs - NEW */}
+          <RecentJobsCard
+            jobs={[
+              { id: '1', title: 'AC Repair', earnings: 850, date: 'Today', customerName: 'Priya S.' },
+              { id: '2', title: 'Wiring Fix', earnings: 1200, date: 'Yesterday', customerName: 'Rahul M.' },
+              { id: '3', title: 'Fan Installation', earnings: 400, date: 'Yesterday', customerName: 'Amit K.' },
+            ]}
+            onViewAll={handleViewEarnings}
+          />
 
-          {/* Performance Metrics */}
-          <View style={styles.growthSection}>
-            <PerformanceMetricsCard metrics={WORKER_PERFORMANCE_METRICS} />
-          </View>
+          {/* Mini Performance Summary */}
+          <WorkerPerformanceSummary
+            responseRate={WORKER_PERFORMANCE_METRICS.responseRate}
+            acceptanceRate={WORKER_PERFORMANCE_METRICS.acceptanceRate}
+            averageRating={WORKER_PERFORMANCE_METRICS.averageRating}
+            onViewAnalytics={handleViewEarnings}
+          />
 
-          {/* Profile Optimization Tips */}
-          <View style={styles.growthSection}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.titleRowWithIcon}>
-                <Ionicons name="bulb" size={20} color={COLORS.warning} />
-                <Text style={styles.sectionTitle}>Smart Insights</Text>
-              </View>
-            </View>
-            {getPriorityTips(3).map((tip) => (
-              <OptimizationTipCard
-                key={tip.id}
-                tip={tip}
-                onAction={() => router.push(tip.route as any)}
-              />
-            ))}
-          </View>
-
-          {/* Boost Preview */}
-          <View style={styles.growthSection}>
-            <BoostPreviewCard onLearnMore={() => {}} />
-          </View>
-
-          {/* Achievements & Badges */}
-          <View style={styles.growthSection}>
-            <AchievementsBadges achievements={DUMMY_ACHIEVEMENTS} />
-          </View>
-
-          {/* Earnings Snapshot */}
-          <TouchableOpacity style={styles.earningsCard} onPress={handleViewEarnings} activeOpacity={0.8}>
-            <View style={styles.earningsHeader}>
-              <View>
-                <Text style={styles.earningsLabel}>Your Earnings</Text>
-                <Text style={styles.earningsValue}>₹{DUMMY_EARNINGS_OVERVIEW.thisMonth.toLocaleString()}</Text>
-                <Text style={styles.earningsSubtext}>This month</Text>
-              </View>
-              <TouchableOpacity style={styles.earningsIconButton} onPress={handleViewEarnings}>
-                <Ionicons name="analytics" size={32} color={COLORS.secondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.earningsStats}>
-              <View style={styles.earningsStatItem}>
-                <Text style={styles.earningsStatValue}>₹{DUMMY_EARNINGS_OVERVIEW.today.toLocaleString()}</Text>
-                <Text style={styles.earningsStatLabel}>Today</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.earningsStatItem}>
-                <Text style={styles.earningsStatValue}>{DUMMY_PERFORMANCE_METRICS.totalJobsCompleted}</Text>
-                <Text style={styles.earningsStatLabel}>Jobs Done</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.earningsStatItem}>
-                <Text style={styles.earningsStatValue}>{DUMMY_PERFORMANCE_METRICS.averageRating}⭐</Text>
-                <Text style={styles.earningsStatLabel}>Rating</Text>
-              </View>
-            </View>
-            <View style={styles.viewDetailsButton}>
-              <Text style={styles.viewDetailsText}>View Full Analytics</Text>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-            </View>
-          </TouchableOpacity>
-
-          {/* New Work Requests */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>New Work Requests</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/jobs')}>
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.workRequestsCard}>
-              <View style={styles.workRequestIcon}>
-                <Ionicons name="hammer" size={28} color={COLORS.primary} />
-              </View>
-              <View style={styles.workRequestInfo}>
-                <Text style={styles.workRequestCount}>3 New Requests</Text>
-                <Text style={styles.workRequestSubtext}>Respond quickly to get hired</Text>
-              </View>
-              <TouchableOpacity style={styles.workRequestButton} onPress={() => router.push('/(tabs)/jobs')}>
-                <Text style={styles.workRequestButtonText}>View</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Performance Highlights */}
-          <View style={styles.performanceCard}>
-            <Text style={styles.performanceTitle}>Performance Highlights</Text>
-            <View style={styles.performanceMetrics}>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceValue}>{DUMMY_PERFORMANCE_METRICS.completionRate}%</Text>
-                <Text style={styles.performanceLabel}>Completion Rate</Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${DUMMY_PERFORMANCE_METRICS.completionRate}%` }]} />
-                </View>
-              </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceValue}>{DUMMY_PERFORMANCE_METRICS.acceptanceRate}%</Text>
-                <Text style={styles.performanceLabel}>Acceptance Rate</Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${DUMMY_PERFORMANCE_METRICS.acceptanceRate}%`, backgroundColor: COLORS.secondary }]} />
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Customer CTA - Removed Post a Job */}
-
-          <View style={styles.bottomPadding} />
+          <View style={{ height: SPACING.xl }} />
         </ScrollView>
-
-        {/* AI Assistant FAB */}
-        <FloatingAIButton />
       </SafeAreaView>
     );
   }
@@ -315,7 +243,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header showLocation showProfile showNotifications />
-      
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -508,9 +436,6 @@ export default function HomeScreen() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      {/* AI Assistant FAB */}
-      <FloatingAIButton />
     </SafeAreaView>
   );
 }

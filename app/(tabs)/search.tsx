@@ -18,8 +18,6 @@ import SearchBar from '../components/SearchBar';
 import WorkerCard from '../components/WorkerCard';
 import JobCard from '../components/JobCard';
 import CategoryCard from '../components/CategoryCard';
-import FloatingAIButton from '../components/FloatingAIButton';
-import TrustReassuranceBanner from '../components/TrustReassuranceBanner';
 // Conditionally import WorkersMapView only on native platforms
 let WorkersMapView: any = null;
 if (Platform.OS !== 'web') {
@@ -43,7 +41,7 @@ export default function SearchScreen() {
   const { userLocation } = useLocation();
   const { logSearch } = useAnalytics();
   const isWorkerMode = activeRole === 'WORKER';
-  
+
   const [query, setQuery] = useState('');
   const [workerResults, setWorkerResults] = useState<DummyWorker[]>([]);
   const [jobResults, setJobResults] = useState<DummyJob[]>([]);
@@ -57,7 +55,7 @@ export default function SearchScreen() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list'); // Map/List toggle
   const [aiSuggestionApplied, setAiSuggestionApplied] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   // Worker Search Filters (Customer Mode)
   const [selectedCategory, setSelectedCategory] = useState(params.category || '');
   const [selectedCity, setSelectedCity] = useState('');
@@ -67,7 +65,7 @@ export default function SearchScreen() {
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [availableOnly, setAvailableOnly] = useState(false);
-  
+
   // Job Search Filters (Worker Mode)
   const [jobCategory, setJobCategory] = useState('');
   const [jobStatus, setJobStatus] = useState<JobStatus | ''>('NEW');
@@ -76,7 +74,7 @@ export default function SearchScreen() {
   const [maxDistance, setMaxDistance] = useState(50);
   const [postedWithinDays, setPostedWithinDays] = useState(0);
   const [urgentOnly, setUrgentOnly] = useState(false);
-  
+
   // Sorting
   const [workerSortBy, setWorkerSortBy] = useState<'best_match' | 'rating' | 'experience' | 'price_low' | 'price_high' | 'nearest'>(
     params.nearMe === 'true' ? 'nearest' : 'best_match'
@@ -116,7 +114,7 @@ export default function SearchScreen() {
         // Check if query is natural language (contains common words)
         const naturalLanguageIndicators = ['need', 'want', 'looking', 'find', 'help', 'fix', 'repair', 'install', 'urgent', 'emergency'];
         const isNaturalLanguage = naturalLanguageIndicators.some(word => query.toLowerCase().includes(word));
-        
+
         if (isNaturalLanguage && !aiSuggestionApplied && !isWorkerMode) {
           handleAISearchAssist(query);
         } else {
@@ -136,24 +134,24 @@ export default function SearchScreen() {
     setAiProcessing(true);
     setAiSuggestionApplied(true);
     setError(null);
-    
+
     try {
       const suggestion = await aiService.analyzeSearchQuery(searchQuery);
-      
+
       // Auto-apply AI suggestions
       if (suggestion.category && suggestion.category !== 'General') {
         setSelectedCategory(suggestion.category);
       }
-      
+
       // Set urgency-based sorting
       if (suggestion.urgency === 'high') {
         // For urgent requests, prioritize nearest workers
         setWorkerSortBy('nearest');
       }
-      
+
       // Use extracted intent as search query
       const searchTerm = suggestion.extractedIntent || searchQuery;
-      
+
       // Perform the search
       handleSearch(searchTerm);
     } catch (error) {
@@ -172,7 +170,7 @@ export default function SearchScreen() {
     const q = searchQuery || query;
     setIsLoading(true);
     setError(null);
-    
+
     // Log search event
     const filters = {
       category: isWorkerMode ? jobCategory : selectedCategory,
@@ -184,9 +182,9 @@ export default function SearchScreen() {
       availableOnly: availableOnly || undefined,
       urgentOnly: urgentOnly || undefined,
     };
-    
+
     logSearch(q, filters);
-    
+
     setTimeout(() => {
       try {
         if (isWorkerMode) {
@@ -269,7 +267,7 @@ export default function SearchScreen() {
 
           setWorkerResults(sorted);
         }
-        
+
         if (q.trim()) {
           addRecentSearch(q.trim());
         }
@@ -304,9 +302,9 @@ export default function SearchScreen() {
 
   const handleVoiceSearch = async () => {
     if (!voiceText.trim()) return;
-    
+
     setAiProcessing(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('voice-search', {
         body: { query: voiceText, location: selectedCity || 'Mumbai' },
@@ -316,14 +314,14 @@ export default function SearchScreen() {
 
       if (data.success && data.parsed) {
         const { category, sub_skill, location_hint } = data.parsed;
-        
+
         if (category) {
           setSelectedCategory(category.charAt(0).toUpperCase() + category.slice(1));
         }
         if (location_hint) {
           setSelectedCity(location_hint);
         }
-        
+
         setQuery(voiceText);
         setShowVoiceModal(false);
         handleSearch(voiceText);
@@ -378,24 +376,24 @@ export default function SearchScreen() {
 
   const activeFiltersCount = isWorkerMode
     ? [
-        jobCategory,
-        jobStatus && jobStatus !== 'NEW',
-        minBudget > 0,
-        maxBudget < 5000,
-        maxDistance < 50,
-        postedWithinDays > 0,
-        urgentOnly,
-      ].filter(Boolean).length
+      jobCategory,
+      jobStatus && jobStatus !== 'NEW',
+      minBudget > 0,
+      maxBudget < 5000,
+      maxDistance < 50,
+      postedWithinDays > 0,
+      urgentOnly,
+    ].filter(Boolean).length
     : [
-        selectedCategory,
-        selectedCity,
-        minExperience > 0,
-        minPrice > 0,
-        maxPrice < 2000,
-        minRating > 0,
-        verifiedOnly,
-        availableOnly,
-      ].filter(Boolean).length;
+      selectedCategory,
+      selectedCity,
+      minExperience > 0,
+      minPrice > 0,
+      maxPrice < 2000,
+      minRating > 0,
+      verifiedOnly,
+      availableOnly,
+    ].filter(Boolean).length;
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -404,10 +402,9 @@ export default function SearchScreen() {
         onChangeText={setQuery}
         onSubmit={handleSearch}
         onVoicePress={() => setShowVoiceModal(true)}
-        autoFocus={!params.category}
         isLoading={isLoading || aiProcessing}
       />
-      
+
       <View style={styles.filterRow}>
         {/* Map/List Toggle - Customer Mode Only - Native platforms only */}
         {!isWorkerMode && Platform.OS !== 'web' && (
@@ -438,7 +435,7 @@ export default function SearchScreen() {
             Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
           </Text>
         </TouchableOpacity>
-        
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChips}>
           {CATEGORIES.slice(0, 8).map((cat) => (
             <TouchableOpacity
@@ -504,25 +501,6 @@ export default function SearchScreen() {
           <Ionicons name="chevron-down" size={16} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
-
-      {/* Trust Reassurance */}
-      {!isWorkerMode && verifiedOnly && (
-        <View style={styles.trustBannerContainer}>
-          <TrustReassuranceBanner 
-            message="Only verified workers are shown" 
-            variant="verified"
-          />
-        </View>
-      )}
-      {!isWorkerMode && !verifiedOnly && workerResults.length > 0 && (
-        <View style={styles.trustBannerContainer}>
-          <TrustReassuranceBanner 
-            message="Ratings are from real customers" 
-            icon="star"
-            variant="info"
-          />
-        </View>
-      )}
     </View>
   );
 
@@ -549,8 +527,8 @@ export default function SearchScreen() {
       {!isWorkerMode && viewMode === 'map' && Platform.OS !== 'web' && WorkersMapView ? (
         <View style={styles.mapContainer}>
           {renderHeader()}
-          <WorkersMapView 
-            workers={workerResults} 
+          <WorkersMapView
+            workers={workerResults}
             userLocation={userLocation}
             isLoading={isLoading}
           />
@@ -560,7 +538,7 @@ export default function SearchScreen() {
         <FlatList
           data={isWorkerMode ? jobResults : workerResults}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => 
+          renderItem={({ item }) =>
             isWorkerMode ? (
               <JobCard job={item as DummyJob} />
             ) : (
@@ -581,13 +559,13 @@ export default function SearchScreen() {
             <TouchableOpacity style={styles.closeButton} onPress={() => setShowVoiceModal(false)}>
               <Ionicons name="close" size={24} color={COLORS.textSecondary} />
             </TouchableOpacity>
-            
+
             <View style={styles.voiceContent}>
               <Text style={styles.voiceTitle}>Voice Search</Text>
               <Text style={styles.voiceSubtitle}>
                 Describe what you need, and AI will find the right workers
               </Text>
-              
+
               <TouchableOpacity
                 style={[styles.micButton, isListening && styles.micButtonActive]}
                 onPress={simulateVoiceInput}
@@ -599,16 +577,16 @@ export default function SearchScreen() {
                   <Ionicons name="mic" size={40} color={COLORS.white} />
                 )}
               </TouchableOpacity>
-              
+
               <Text style={styles.voiceHint}>
                 {isListening ? 'Listening...' : 'Tap to speak'}
               </Text>
-              
+
               {voiceText ? (
                 <View style={styles.voiceTextContainer}>
                   <Text style={styles.voiceTextLabel}>You said:</Text>
                   <Text style={styles.voiceTextValue}>"{voiceText}"</Text>
-                  
+
                   <TouchableOpacity
                     style={styles.searchVoiceButton}
                     onPress={handleVoiceSearch}
@@ -647,7 +625,7 @@ export default function SearchScreen() {
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.filtersContent}>
               <View style={styles.filterSection}>
                 <Text style={styles.filterLabel}>City</Text>
@@ -735,8 +713,7 @@ export default function SearchScreen() {
         </View>
       </Modal>
 
-      {/* AI Assistant FAB */}
-      <FloatingAIButton />
+
     </SafeAreaView>
   );
 }

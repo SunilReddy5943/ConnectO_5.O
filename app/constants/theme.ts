@@ -7,29 +7,34 @@ export const COLORS = {
   secondaryLight: '#FB923C',
   secondaryDark: '#EA580C',
   success: '#10B981',
+  successLight: '#D1FAE5',
   warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   error: '#EF4444',
+  errorLight: '#FEE2E2',
   info: '#06B6D4',
-  
+  infoLight: '#CFFAFE',
+
   // Neutrals
   white: '#FFFFFF',
   background: '#F8FAFC',
+  backgroundLight: '#F1F5F9',
   surface: '#FFFFFF',
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
-  
+
   // Text
   textPrimary: '#0F172A',
   textSecondary: '#475569',
   textMuted: '#94A3B8',
   textLight: '#CBD5E1',
   textWhite: '#FFFFFF',
-  
+
   // Status
   verified: '#10B981',
   pending: '#F59E0B',
   unverified: '#94A3B8',
-  
+
   // Ratings
   star: '#FBBF24',
   starEmpty: '#E2E8F0',

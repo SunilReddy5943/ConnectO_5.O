@@ -1,5 +1,5 @@
-import React, { useCallback, memo } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useCallback, memo, useEffect } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS, BORDER_RADIUS, SPACING, FONT_SIZES, SHADOWS } from '../constants/theme';
@@ -7,6 +7,9 @@ import { useApp } from '../context/AppContext';
 import { DummyWorker } from '../data/dummyWorkers';
 import { formatDistance } from '../lib/locationService';
 import VerifiedBadge from './VerifiedBadge';
+import NotifyButton from './NotifyButton';
+import { useWorkerNotify } from '../context/WorkerNotifyContext';
+import { NotifyStatus } from '../lib/workerNotifyTypes';
 
 interface WorkerCardProps {
   worker: DummyWorker & { distance?: number }; // Distance in km
@@ -17,6 +20,42 @@ function WorkerCard({ worker, variant = 'default' }: WorkerCardProps) {
   const router = useRouter();
   const { toggleSavedWorker, isWorkerSaved } = useApp();
   const saved = isWorkerSaved(worker.id);
+
+  // Get notify context (may not be available in all contexts)
+  let notifyContext: ReturnType<typeof useWorkerNotify> | null = null;
+  try {
+    notifyContext = useWorkerNotify();
+  } catch {
+    // Context not available, notify button will be hidden
+  }
+
+  const notifyState = notifyContext?.getWorkerStatus(worker.id) || { status: NotifyStatus.READY, cooldownSeconds: 0 };
+
+  // Refresh cooldown on mount
+  useEffect(() => {
+    if (notifyContext && variant === 'default') {
+      notifyContext.refreshCooldown(worker.id);
+    }
+  }, [worker.id]);
+
+  const handleNotifyPress = useCallback(() => {
+    if (notifyContext) {
+      notifyContext.openNotifyModal(worker.id, worker.name);
+    }
+  }, [notifyContext, worker.id, worker.name]);
+
+  const handleCall = useCallback(() => {
+    // In production, use worker's actual phone number
+    const phoneNumber = '+91' + Math.floor(Math.random() * 9000000000 + 1000000000);
+    Linking.openURL(`tel:${phoneNumber}`);
+  }, []);
+
+  const handleMessage = useCallback(() => {
+    router.push({
+      pathname: '/chat/[id]',
+      params: { id: worker.id },
+    });
+  }, [worker.id, router]);
 
   const handlePress = useCallback(() => {
     router.push({
@@ -33,8 +72,8 @@ function WorkerCard({ worker, variant = 'default' }: WorkerCardProps) {
     return (
       <TouchableOpacity style={styles.compactCard} onPress={handlePress} activeOpacity={0.8}>
         {worker.profile_photo_url ? (
-          <Image 
-            source={{ uri: worker.profile_photo_url }} 
+          <Image
+            source={{ uri: worker.profile_photo_url }}
             style={styles.compactImage}
           />
         ) : (
@@ -141,6 +180,27 @@ function WorkerCard({ worker, variant = 'default' }: WorkerCardProps) {
           <Text style={styles.wageLabel}>/day</Text>
         </View>
       </View>
+
+      {/* Action Bar */}
+      {notifyContext && (
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleCall}>
+            <Ionicons name="call" size={18} color={COLORS.success} />
+            <Text style={[styles.actionLabel, { color: COLORS.success }]}>Call</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleMessage}>
+            <Ionicons name="chatbubble" size={18} color={COLORS.primary} />
+            <Text style={[styles.actionLabel, { color: COLORS.primary }]}>Message</Text>
+          </TouchableOpacity>
+
+          <NotifyButton
+            status={notifyState.status}
+            cooldownSeconds={notifyState.cooldownSeconds}
+            onPress={handleNotifyPress}
+          />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -240,6 +300,31 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    gap: SPACING.sm,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.borderLight,
+    gap: SPACING.xs,
+  },
+  actionLabel: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
   },
   metaItem: {
     flexDirection: 'row',

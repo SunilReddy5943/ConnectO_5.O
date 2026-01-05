@@ -17,6 +17,9 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useAdmin } from '../context/AdminContext';
 import RoleSwitcher from '../components/RoleSwitcher';
+import ModeSwitchButton from '../components/role/ModeSwitchButton';
+import RoleSwitchModal from '../components/role/RoleSwitchModal';
+import ModeTransitionOverlay from '../components/role/ModeTransitionOverlay';
 import { APP_VERSION } from '../config/featureFlags';
 
 interface MenuItem {
@@ -32,12 +35,17 @@ interface MenuItem {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, logout, activeRole, hasRole } = useAuth();
+  const { user, isAuthenticated, logout, activeRole, hasRole, switchRole } = useAuth();
   const { savedWorkers, unreadCount } = useApp();
   const { isAdmin, getUnreviewedReportsCount } = useAdmin();
 
   const isWorkerMode = activeRole === 'WORKER';
-  
+
+  // Role switch state
+  const [showRoleSwitchModal, setShowRoleSwitchModal] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+
   // Animation for referral card
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -83,6 +91,40 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleSwitchRolePress = () => {
+    setShowRoleSwitchModal(true);
+  };
+
+  const handleConfirmSwitch = async () => {
+    setIsSwitchingRole(true);
+    const targetRole = activeRole === 'CUSTOMER' ? 'WORKER' : 'CUSTOMER';
+
+    try {
+      await switchRole(targetRole);
+      setShowRoleSwitchModal(false);
+      setIsTransitioning(true);
+    } catch (error: any) {
+      setIsSwitchingRole(false);
+      Alert.alert('Cannot Switch', error.message || 'Failed to switch role');
+    }
+  };
+
+  const handleCancelSwitch = () => {
+    setShowRoleSwitchModal(false);
+  };
+
+  const handleTransitionComplete = () => {
+    setIsTransitioning(false);
+    setIsSwitchingRole(false);
+    // Show toast
+    Alert.alert(
+      'Mode Switched',
+      `You're now in ${activeRole} mode`,
+      [{ text: 'OK' }]
+    );
+  };
+
+
   const menuItems: MenuItem[] = [
     // Admin Panel - Only for admins
     ...(isAdmin ? [{
@@ -123,13 +165,21 @@ export default function ProfileScreen() {
       id: 'settings',
       icon: 'settings',
       title: 'Settings',
-      onPress: () => {},
+      onPress: () => { },
     },
     {
       id: 'about',
       icon: 'information-circle',
       title: 'About & Support',
       onPress: () => router.push('/about'),
+    },
+    {
+      id: 'feedback',
+      icon: 'chatbubble-ellipses',
+      title: 'Feedback & Suggestions',
+      subtitle: 'Help us improve ConnectO',
+      onPress: () => router.push('/feedback'),
+      color: '#8B5CF6',
     },
   ];
 
@@ -163,7 +213,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
-        
+
         <View style={styles.guestContainer}>
           <View style={styles.guestIconContainer}>
             <Ionicons name="person-circle" size={80} color={COLORS.textMuted} />
@@ -189,7 +239,10 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => router.push('/edit-profile')}
+          >
             <Ionicons name="create-outline" size={22} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
@@ -206,14 +259,17 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
-            <TouchableOpacity style={styles.cameraButton}>
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => router.push('/edit-profile')}
+            >
               <Ionicons name="camera" size={16} color={COLORS.white} />
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.userName}>{user?.name || 'User'}</Text>
           <Text style={styles.userPhone}>{user?.phone}</Text>
-          
+
           <View style={styles.roleBadge}>
             <Ionicons
               name={user?.activeRole === 'WORKER' ? 'construct' : 'person'}
@@ -233,7 +289,11 @@ export default function ProfileScreen() {
             <Text style={styles.roleSwitcherSubtext}>
               You have {user.roles.length} roles. The app will remember your last choice.
             </Text>
-            <RoleSwitcher showLabels={false} compact={false} />
+            <ModeSwitchButton
+              variant="pill"
+              position="inline"
+              onPress={handleSwitchRolePress}
+            />
           </View>
         )}
 
@@ -257,7 +317,7 @@ export default function ProfileScreen() {
 
         {/* Become a Worker Banner - Only for customers without WORKER role */}
         {!hasRole('WORKER') && activeRole === 'CUSTOMER' && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.workerBanner}
             onPress={() => router.push('/auth/worker-register')}
             activeOpacity={0.9}
@@ -281,7 +341,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Refer & Earn Card - Above Logout */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.referralCard,
             {
@@ -290,7 +350,7 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/referral' as any)}
             activeOpacity={0.8}
           >
@@ -300,7 +360,7 @@ export default function ProfileScreen() {
                 <Text style={styles.referralSubtitle}>
                   Get ₹100 when your friend completes their first booking
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.referNowButton}
                   onPress={() => router.push('/referral' as any)}
                 >
@@ -323,6 +383,23 @@ export default function ProfileScreen() {
         {/* App Version */}
         <Text style={styles.versionText}>ConnectO v{APP_VERSION.VERSION} ({APP_VERSION.ENVIRONMENT})</Text>
       </ScrollView>
+
+      {/* Role Switch Modal */}
+      <RoleSwitchModal
+        visible={showRoleSwitchModal}
+        currentRole={(activeRole === 'ADMIN' ? 'CUSTOMER' : activeRole) || 'CUSTOMER'}
+        targetRole={activeRole === 'CUSTOMER' ? 'WORKER' : 'CUSTOMER'}
+        isLoading={isSwitchingRole}
+        onConfirm={handleConfirmSwitch}
+        onCancel={handleCancelSwitch}
+      />
+
+      {/* Mode Transition Overlay */}
+      <ModeTransitionOverlay
+        visible={isTransitioning}
+        targetRole={(activeRole === 'ADMIN' ? 'CUSTOMER' : activeRole) || 'CUSTOMER'}
+        onComplete={handleTransitionComplete}
+      />
     </SafeAreaView>
   );
 }

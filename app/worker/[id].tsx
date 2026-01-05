@@ -58,7 +58,7 @@ export default function WorkerDetailScreen() {
   const { getWorkerRating, getWorkerReviews } = useDeal();
   const { getWorkerVerification, getVerificationLevelBadge, getCustomerVerification } = useTrust();
   const { userLocation } = useLocation();
-  
+
   const [showContactModal, setShowContactModal] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -68,7 +68,7 @@ export default function WorkerDetailScreen() {
   const [showNoResponseBanner, setShowNoResponseBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isCustomerMode = activeRole === 'CUSTOMER' || !activeRole;
-  
+
   const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const worker = useMemo(() => {
@@ -91,7 +91,7 @@ export default function WorkerDetailScreen() {
   // Get trust and verification info
   const workerVerification = useMemo(() => getWorkerVerification(worker.id, worker), [worker.id, worker]);
   const levelBadge = useMemo(() => getVerificationLevelBadge(workerVerification.level), [workerVerification.level]);
-  const customerVerification = useMemo(() => 
+  const customerVerification = useMemo(() =>
     user ? getCustomerVerification(user.id) : { phoneVerified: false, completedDealsCount: 0 },
     [user]
   );
@@ -154,7 +154,7 @@ export default function WorkerDetailScreen() {
   const handleDealRequestSuccess = () => {
     // Log deal sent event
     logDealSent(worker.id, '');
-    
+
     addNotification({
       id: Date.now().toString(),
       title: 'Deal Request Sent',
@@ -176,7 +176,7 @@ export default function WorkerDetailScreen() {
   const handleReportSubmit = () => {
     // Log user report event
     logUserReport(worker.id, 'Reported from worker profile');
-    
+
     // Report has been submitted, close modal
     setShowReportModal(false);
   };
@@ -187,7 +187,7 @@ export default function WorkerDetailScreen() {
     if (responseTimerRef.current) {
       clearTimeout(responseTimerRef.current);
     }
-    
+
     // Start 60-second timer
     responseTimerRef.current = setTimeout(() => {
       setShowNoResponseBanner(true);
@@ -199,7 +199,7 @@ export default function WorkerDetailScreen() {
       router.push('/auth/login');
       return;
     }
-    
+
     // Attempt to call worker (placeholder - will use actual phone later)
     Alert.alert(
       'Call Worker',
@@ -212,7 +212,7 @@ export default function WorkerDetailScreen() {
         },
       ]
     );
-    
+
     // Start response timer
     startResponseTimer();
   };
@@ -242,13 +242,13 @@ export default function WorkerDetailScreen() {
     });
 
     setShowNotifyModal(false);
-    
+
     Alert.alert(
       'Worker Notified',
       "Notified worker. You'll get a response soon.",
       [{ text: 'OK' }]
     );
-    
+
     addNotification({
       id: Date.now().toString(),
       title: 'Worker Notified',
@@ -303,371 +303,372 @@ export default function WorkerDetailScreen() {
 
   return (
     <>
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {error ? (
-        <View style={styles.container}>
-          <ErrorDisplay 
-            message={error} 
-            onRetry={() => {
-              setError(null);
-              // Reload worker data
-              const foundWorker = DUMMY_WORKERS.find(w => w.id === id);
-              if (!foundWorker) {
-                setError('Worker not found');
-              }
-            }}
-          />
-        </View>
-      ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Header Image */}
-          <View style={styles.headerImage}>
-            <Image source={{ uri: worker.profile_photo_url }} style={styles.coverImage} />
-            <View style={styles.headerOverlay} />
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-                <Ionicons name="arrow-back" size={24} color={COLORS.white} />
-              </TouchableOpacity>
-              <View style={styles.headerRight}>
-                <TouchableOpacity style={styles.headerButton} onPress={handleSave}>
-                  <Ionicons
-                    name={saved ? 'heart' : 'heart-outline'}
-                    size={24}
-                    color={saved ? COLORS.error : COLORS.white}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.headerButton}>
-                  <Ionicons name="share-outline" size={24} color={COLORS.white} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        {/* Profile Info */}
-        <View style={styles.profileSection}>
-          <View style={styles.profileHeader}>
-            <Image source={{ uri: worker.profile_photo_url }} style={styles.profileImage} />
-            <View style={styles.profileInfo}>
-              <View style={styles.nameRow}>
-                <Text style={styles.workerName}>{worker.name}</Text>
-                {isVerified && (
-                  <VerifiedBadge size="small" variant="minimal" />
-                )}
-              </View>
-              <Text style={styles.category}>{worker.primary_category}</Text>
-              <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
-                <Text style={styles.location}>{worker.city}, {worker.locality}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <View style={styles.statIcon}>
-                <Ionicons name="star" size={18} color={COLORS.star} />
-              </View>
-              <Text style={styles.statValue}>
-                {workerRating.totalReviews > 0 
-                  ? workerRating.averageRating.toFixed(1) 
-                  : worker.rating_average.toFixed(1)}
-              </Text>
-              <Text style={styles.statLabel}>
-                ({workerRating.totalReviews > 0 ? workerRating.totalReviews : worker.rating_count} reviews)
-              </Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIcon}>
-                <Ionicons name="briefcase" size={18} color={COLORS.primary} />
-              </View>
-              <Text style={styles.statValue}>{worker.years_of_experience}</Text>
-              <Text style={styles.statLabel}>years exp</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIcon}>
-                <Ionicons name="cash" size={18} color={COLORS.success} />
-              </View>
-              <Text style={styles.statValue}>₹{worker.daily_wage_min}</Text>
-              <Text style={styles.statLabel}>/day</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Verification Level & Trust Badges */}
-        <View style={styles.section}>
-          <View style={styles.verificationHeader}>
-            <Text style={styles.sectionTitle}>Trust & Verification</Text>
-            <VerificationLevelBadge
-              level={workerVerification.level}
-              label={levelBadge.label}
-              color={levelBadge.color}
-              icon={levelBadge.icon}
-              size="medium"
+      <SafeAreaView style={styles.container} edges={['top']}>
+        {error ? (
+          <View style={styles.container}>
+            <ErrorDisplay
+              message={error}
+              onRetry={() => {
+                setError(null);
+                // Reload worker data
+                const foundWorker = DUMMY_WORKERS.find(w => w.id === id);
+                if (!foundWorker) {
+                  setError('Worker not found');
+                }
+              }}
             />
           </View>
-          
-          <TrustMessage
-            message="All badges are earned through verified work and customer reviews"
-            type="shield"
-          />
-
-          <View style={styles.badgesContainer}>
-            <TrustBadges badges={workerVerification.badges} />
-          </View>
-        </View>
-
-        {/* Trust Score & Safety */}
-        <View style={styles.section}>
-          <View style={styles.trustContainer}>
-            <TrustScore score={trustScore} size="large" showLabel />
-            <View style={styles.trustDetails}>
-              <View style={styles.trustDetailRow}>
-                <Ionicons name="shield-checkmark" size={18} color={COLORS.verified} />
-                <Text style={styles.trustDetailText}>
-                  {isVerified ? 'Verified Profile' : 'Profile Under Review'}
-                </Text>
-              </View>
-              <View style={styles.trustDetailRow}>
-                <Ionicons name="star" size={18} color={COLORS.star} />
-                <Text style={styles.trustDetailText}>
-                  {worker.rating_average.toFixed(1)} ⭐ ({worker.rating_count} reviews)
-                </Text>
-              </View>
-              <View style={styles.trustDetailRow}>
-                <Ionicons name="checkmark-done" size={18} color={COLORS.success} />
-                <Text style={styles.trustDetailText}>
-                  {Math.round((worker.rating_count / (worker.rating_count + 5)) * 100)}% Job Completion
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Safety Promise */}
-        <View style={styles.section}>
-          <SafetyPromiseCard />
-        </View>
-
-        {/* Secondary Action - Confirm Deal */}
-        {isCustomerMode && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.confirmDealButton}
-              onPress={handleSendDealRequest}
-              activeOpacity={0.9}
-            >
-              <View style={styles.confirmDealContent}>
-                <Ionicons name="document-text" size={22} color={COLORS.primary} />
-                <View style={styles.confirmDealText}>
-                  <Text style={styles.confirmDealTitle}>Need a formal deal?</Text>
-                  <Text style={styles.confirmDealSubtitle}>Send detailed job request with terms</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* About Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.aboutText}>{worker.bio}</Text>
-        </View>
-
-        {/* Skills Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Skills</Text>
-          <View style={styles.skillsContainer}>
-            {worker.sub_skills.map((skill, index) => (
-              <View key={index} style={styles.skillChip}>
-                <Text style={styles.skillText}>{skill}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Work Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Work Details</Text>
-          <View style={styles.detailsGrid}>
-            <View style={styles.detailItem}>
-              <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.detailLabel}>Availability</Text>
-              <Text style={styles.detailValue}>{worker.availability_type.replace('_', ' ')}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Ionicons name="language-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.detailLabel}>Languages</Text>
-              <Text style={styles.detailValue}>{worker.languages.join(', ')}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Ionicons name="car-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.detailLabel}>Travel</Text>
-              <Text style={styles.detailValue}>
-                {worker.travel_willingness ? `Up to ${worker.travel_radius_km} km` : 'Local only'}
-              </Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.detailLabel}>Rate Range</Text>
-              <Text style={styles.detailValue}>₹{worker.daily_wage_min} - ₹{worker.daily_wage_max}/day</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Service Area Map */}
-        {worker.location && Platform.OS !== 'web' && MiniMapView && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Area</Text>
-            <Text style={styles.serviceAreaText}>
-              Serves within {worker.travel_radius_km} km radius
-            </Text>
-            <View style={styles.mapContainer}>
-              <MiniMapView
-                location={worker.location}
-                title={`${worker.name}'s Service Area`}
-                showRadius
-                radiusKm={worker.travel_radius_km}
-                height={180}
-              />
-            </View>
-            <View style={styles.serviceAreaNote}>
-              <Ionicons name="information-circle" size={16} color={COLORS.info} />
-              <Text style={styles.serviceAreaNoteText}>
-                Approximate service area. Exact location shared after deal acceptance.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Portfolio Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Portfolio</Text>
-            <TouchableOpacity onPress={() => setShowGallery(true)}>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {portfolioImages.slice(0, 4).map((item, index) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.portfolioItem}
-                onPress={() => {
-                  setSelectedImageIndex(index);
-                  setShowGallery(true);
-                }}
-              >
-                <Image source={{ uri: item.url }} style={styles.portfolioImage} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Reviews Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Customer Reviews</Text>
-            <Text style={styles.reviewCount}>
-              {verifiedReviews.length > 0 ? verifiedReviews.length : workerReviews.length} reviews
-            </Text>
-          </View>
-          
-          {verifiedReviews.length > 0 ? (
-            <>
-              <View style={styles.verifiedBanner}>
-                <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-                <Text style={styles.verifiedBannerText}>All reviews are from verified completed work</Text>
-              </View>
-              
-              {verifiedReviews.map(({ deal, review }) => (
-                <View key={deal.id} style={styles.verifiedReviewCard}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewerInfo}>
-                      <View style={styles.reviewerAvatar}>
-                        <Text style={styles.reviewerInitial}>{deal.customerName.charAt(0)}</Text>
-                      </View>
-                      <View>
-                        <Text style={styles.reviewerName}>{deal.customerName}</Text>
-                        <Text style={styles.reviewDate}>
-                          {new Date(review.createdAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.verifiedWorkBadge}>
-                      <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
-                      <Text style={styles.verifiedWorkText}>Verified Work</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.reviewRating}>
-                    <StarRating rating={review.rating} readonly size={18} />
-                  </View>
-                  
-                  {review.comment && (
-                    <Text style={styles.reviewComment}>{review.comment}</Text>
-                  )}
-                  
-                  <View style={styles.workDetails}>
-                    <Text style={styles.workDetailsLabel}>Work:</Text>
-                    <Text style={styles.workDetailsText} numberOfLines={2}>{deal.problem}</Text>
-                  </View>
-                </View>
-              ))}
-            </>
-          ) : (
-            <>
-              <Text style={styles.reviewSubtitle}>All reviews are from verified customers</Text>
-              {workerReviews.slice(0, 5).map((review) => (
-                <ReviewCard key={review.id} review={review} variant="full" />
-              ))}
-              {workerReviews.length > 5 && (
-                <TouchableOpacity style={styles.viewAllReviews}>
-                  <Text style={styles.viewAllReviewsText}>View all {workerReviews.length} reviews</Text>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Header Image */}
+            <View style={styles.headerImage}>
+              <Image source={{ uri: worker.profile_photo_url }} style={styles.coverImage} />
+              <View style={styles.headerOverlay} />
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+                  <Ionicons name="arrow-back" size={24} color={COLORS.white} />
                 </TouchableOpacity>
+                <View style={styles.headerRight}>
+                  <TouchableOpacity style={styles.headerButton} onPress={handleSave}>
+                    <Ionicons
+                      name={saved ? 'heart' : 'heart-outline'}
+                      size={24}
+                      color={saved ? COLORS.error : COLORS.white}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.headerButton}>
+                    <Ionicons name="share-outline" size={24} color={COLORS.white} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+            {/* Profile Info */}
+            <View style={styles.profileSection}>
+              <View style={styles.profileHeader}>
+                <Image source={{ uri: worker.profile_photo_url }} style={styles.profileImage} />
+                <View style={styles.profileInfo}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.workerName}>{worker.name}</Text>
+                    {isVerified && (
+                      <VerifiedBadge size="small" variant="minimal" />
+                    )}
+                  </View>
+                  <Text style={styles.category}>{worker.primary_category}</Text>
+                  <View style={styles.locationRow}>
+                    <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
+                    <Text style={styles.location}>{worker.city}, {worker.locality}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Stats Row */}
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <View style={styles.statIcon}>
+                    <Ionicons name="star" size={18} color={COLORS.star} />
+                  </View>
+                  <Text style={styles.statValue}>
+                    {workerRating.totalReviews > 0
+                      ? workerRating.averageRating.toFixed(1)
+                      : worker.rating_average.toFixed(1)}
+                  </Text>
+                  <Text style={styles.statLabel}>
+                    ({workerRating.totalReviews > 0 ? workerRating.totalReviews : worker.rating_count} reviews)
+                  </Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <View style={styles.statIcon}>
+                    <Ionicons name="briefcase" size={18} color={COLORS.primary} />
+                  </View>
+                  <Text style={styles.statValue}>{worker.years_of_experience}</Text>
+                  <Text style={styles.statLabel}>years exp</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <View style={styles.statIcon}>
+                    <Ionicons name="cash" size={18} color={COLORS.success} />
+                  </View>
+                  <Text style={styles.statValue}>₹{worker.daily_wage_min}</Text>
+                  <Text style={styles.statLabel}>/day</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Verification Level & Trust Badges */}
+            <View style={styles.section}>
+              <View style={styles.verificationHeader}>
+                <Text style={styles.sectionTitle}>Trust & Verification</Text>
+                <VerificationLevelBadge
+                  level={workerVerification.level}
+                  label={levelBadge.label}
+                  color={levelBadge.color}
+                  icon={levelBadge.icon}
+                  size="medium"
+                />
+              </View>
+
+              <TrustMessage
+                message="All badges are earned through verified work and customer reviews"
+                type="shield"
+              />
+
+              <View style={styles.badgesContainer}>
+                <TrustBadges badges={workerVerification.badges} />
+              </View>
+            </View>
+
+            {/* Trust Score & Safety */}
+            <View style={styles.section}>
+              <View style={styles.trustContainer}>
+                <TrustScore score={trustScore} size="large" showLabel />
+                <View style={styles.trustDetails}>
+                  <View style={styles.trustDetailRow}>
+                    <Ionicons name="shield-checkmark" size={18} color={COLORS.verified} />
+                    <Text style={styles.trustDetailText}>
+                      {isVerified ? 'Verified Profile' : 'Profile Under Review'}
+                    </Text>
+                  </View>
+                  <View style={styles.trustDetailRow}>
+                    <Ionicons name="star" size={18} color={COLORS.star} />
+                    <Text style={styles.trustDetailText}>
+                      {worker.rating_average.toFixed(1)} ⭐ ({worker.rating_count} reviews)
+                    </Text>
+                  </View>
+                  <View style={styles.trustDetailRow}>
+                    <Ionicons name="checkmark-done" size={18} color={COLORS.success} />
+                    <Text style={styles.trustDetailText}>
+                      {Math.round((worker.rating_count / (worker.rating_count + 5)) * 100)}% Job Completion
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Safety Promise */}
+            <View style={styles.section}>
+              <SafetyPromiseCard />
+            </View>
+
+            {/* Secondary Action - Confirm Deal */}
+            {isCustomerMode && (
+              <View style={styles.section}>
+                <TouchableOpacity
+                  style={styles.confirmDealButton}
+                  onPress={handleSendDealRequest}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.confirmDealContent}>
+                    <Ionicons name="document-text" size={22} color={COLORS.primary} />
+                    <View style={styles.confirmDealText}>
+                      <Text style={styles.confirmDealTitle}>Need a formal deal?</Text>
+                      <Text style={styles.confirmDealSubtitle}>Send detailed job request with terms</Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* About Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.aboutText}>{worker.bio}</Text>
+            </View>
+
+            {/* Skills Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Skills</Text>
+              <View style={styles.skillsContainer}>
+                {worker.sub_skills.map((skill, index) => (
+                  <View key={index} style={styles.skillChip}>
+                    <Text style={styles.skillText}>{skill}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Work Details */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Work Details</Text>
+              <View style={styles.detailsGrid}>
+                <View style={styles.detailItem}>
+                  <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.detailLabel}>Availability</Text>
+                  <Text style={styles.detailValue}>{worker.availability_type.replace('_', ' ')}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="language-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.detailLabel}>Languages</Text>
+                  <Text style={styles.detailValue}>{worker.languages.join(', ')}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="car-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.detailLabel}>Travel</Text>
+                  <Text style={styles.detailValue}>
+                    {worker.travel_willingness ? `Up to ${worker.travel_radius_km} km` : 'Local only'}
+                  </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
+                  <Text style={styles.detailLabel}>Rate Range</Text>
+                  <Text style={styles.detailValue}>₹{worker.daily_wage_min} - ₹{worker.daily_wage_max}/day</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Service Area Map */}
+            {worker.location && Platform.OS !== 'web' && MiniMapView && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Service Area</Text>
+                <Text style={styles.serviceAreaText}>
+                  Serves within {worker.travel_radius_km} km radius
+                </Text>
+                <View style={styles.mapContainer}>
+                  <MiniMapView
+                    location={worker.location}
+                    title={`${worker.name}'s Service Area`}
+                    showRadius
+                    radiusKm={worker.travel_radius_km}
+                    height={180}
+                  />
+                </View>
+                <View style={styles.serviceAreaNote}>
+                  <Ionicons name="information-circle" size={16} color={COLORS.info} />
+                  <Text style={styles.serviceAreaNoteText}>
+                    Approximate service area. Exact location shared after deal acceptance.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Portfolio Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Portfolio</Text>
+                <TouchableOpacity onPress={() => setShowGallery(true)}>
+                  <Text style={styles.viewAllText}>View All</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {portfolioImages.slice(0, 4).map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.portfolioItem}
+                    onPress={() => {
+                      setSelectedImageIndex(index);
+                      setShowGallery(true);
+                    }}
+                  >
+                    <Image source={{ uri: item.url }} style={styles.portfolioImage} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Reviews Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Customer Reviews</Text>
+                <Text style={styles.reviewCount}>
+                  {verifiedReviews.length > 0 ? verifiedReviews.length : workerReviews.length} reviews
+                </Text>
+              </View>
+
+              {verifiedReviews.length > 0 ? (
+                <>
+                  <View style={styles.verifiedBanner}>
+                    <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+                    <Text style={styles.verifiedBannerText}>All reviews are from verified completed work</Text>
+                  </View>
+
+                  {verifiedReviews.map(({ deal, review }) => (
+                    <View key={deal.id} style={styles.verifiedReviewCard}>
+                      <View style={styles.reviewHeader}>
+                        <View style={styles.reviewerInfo}>
+                          <View style={styles.reviewerAvatar}>
+                            <Text style={styles.reviewerInitial}>{deal.customerName.charAt(0)}</Text>
+                          </View>
+                          <View>
+                            <Text style={styles.reviewerName}>{deal.customerName}</Text>
+                            <Text style={styles.reviewDate}>
+                              {new Date(review.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.verifiedWorkBadge}>
+                          <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
+                          <Text style={styles.verifiedWorkText}>Verified Work</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.reviewRating}>
+                        <StarRating rating={review.rating} readonly size={18} />
+                      </View>
+
+                      {review.comment && (
+                        <Text style={styles.reviewComment}>{review.comment}</Text>
+                      )}
+
+                      <View style={styles.workDetails}>
+                        <Text style={styles.workDetailsLabel}>Work:</Text>
+                        <Text style={styles.workDetailsText} numberOfLines={2}>{deal.problem}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.reviewSubtitle}>All reviews are from verified customers</Text>
+                  {workerReviews.slice(0, 5).map((review) => (
+                    <ReviewCard key={review.id} review={review} variant="full" />
+                  ))}
+                  {workerReviews.length > 5 && (
+                    <TouchableOpacity style={styles.viewAllReviews}>
+                      <Text style={styles.viewAllReviewsText}>View all {workerReviews.length} reviews</Text>
+                      <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </View>
+            </View>
 
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-      )}
+            <View style={styles.bottomPadding} />
+          </ScrollView>
+        )}
 
-      {/* Premium Action Bar */}
-      <WorkerProfileActionBar
-        price={worker.daily_wage_min}
-        priceLabel="Starting from"
-        onChatPress={handleChat}
-        onCallPress={handleCallNow}
-        isCustomerMode={isCustomerMode}
-      />
-      
-      {/* No Response Banner */}
-      <NoResponseBanner
-        visible={showNoResponseBanner}
-        onNotifyPress={handleNotify}
-      />
-    </SafeAreaView>
+        {/* Premium Action Bar */}
+        <WorkerProfileActionBar
+          price={worker.daily_wage_min}
+          priceLabel="Starting from"
+          onChatPress={handleChat}
+          onNotifyPress={handleNotify}
+          onCallPress={handleCallNow}
+          isCustomerMode={isCustomerMode}
+        />
 
-    {/* Contact Modal */}
-    <Modal visible={showContactModal} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
-        <View style={styles.contactModal}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Contact {worker.name}</Text>
-            <TouchableOpacity onPress={() => setShowContactModal(false)}>
-              <Ionicons name="close" size={24} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          </View>
-            
+        {/* No Response Banner */}
+        <NoResponseBanner
+          visible={showNoResponseBanner}
+          onNotifyPress={handleNotify}
+        />
+      </SafeAreaView>
+
+      {/* Contact Modal */}
+      <Modal visible={showContactModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.contactModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Contact {worker.name}</Text>
+              <TouchableOpacity onPress={() => setShowContactModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.workerPreview}>
               <Image source={{ uri: worker.profile_photo_url }} style={styles.modalWorkerImage} />
               <View>
@@ -699,7 +700,7 @@ export default function WorkerDetailScreen() {
             </TouchableOpacity>
 
             {/* Quick Notify Option */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.contactOption}
               onPress={() => {
                 setShowContactModal(false);
@@ -720,8 +721,8 @@ export default function WorkerDetailScreen() {
             <Text style={styles.privacyNote}>
               Phone numbers are shared only after mutual agreement
             </Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.reportOption}
               onPress={() => {
                 setShowContactModal(false);
@@ -742,7 +743,7 @@ export default function WorkerDetailScreen() {
         onClose={() => setShowDealRequestModal(false)}
         onSuccess={handleDealRequestSuccess}
       />
-      
+
       {/* Report User Modal */}
       <ReportUserModal
         visible={showReportModal}
@@ -751,7 +752,7 @@ export default function WorkerDetailScreen() {
         onClose={() => setShowReportModal(false)}
         onReport={handleReportSubmit}
       />
-      
+
       {/* Notify Worker Modal */}
       <NotifyWorkerModal
         visible={showNotifyModal}
